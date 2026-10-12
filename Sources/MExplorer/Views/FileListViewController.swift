@@ -224,7 +224,7 @@ final class FileListViewController: NSViewController, FileAreaController {
         let menu = NSMenu()
         guard let tab else { return menu }
         for id in ColumnID.allCases {
-            let item = menu.addBlockItem(id.title) { [weak self] in
+            let item = menu.addBlockItem(id.title) {
                 tab.update { s in
                     if s.visibleColumns.contains(id) {
                         if id != .name { s.visibleColumns.removeAll { $0 == id } }
