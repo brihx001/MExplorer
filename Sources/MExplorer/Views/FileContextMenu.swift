@@ -1,0 +1,200 @@
+import AppKit
+
+/// Menu contextuel de la zone de fichiers : reprend l'ordre de Windows 11
+/// et y ajoute les entrees natives du Finder (Coup d'oeil, tags, services, partage).
+enum FileContextMenu {
+
+    static func build(for items: [FileItem], model: WindowModel, anchorView: NSView) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+
+        if items.isEmpty {
+            buildBackgroundMenu(menu, model: model)
+        } else {
+            buildSelectionMenu(menu, items: items, model: model, anchorView: anchorView)
+        }
+        return menu
+    }
+
+    // MARK: - Clic dans le vide
+
+    private static func buildBackgroundMenu(_ menu: NSMenu, model: WindowModel) {
+        let inFolder = model.currentFolder != nil
+        let tab = model.activeTab
+
+        let newMenu = NSMenu()
+        newMenu.addBlockItem("Dossier", enabled: inFolder, symbol: "folder") { model.newFolder() }
+        newMenu.addItem(.separator())
+        newMenu.addBlockItem("Document texte", enabled: inFolder, symbol: "doc.text") {
+            model.newFile(named: "Nouveau document.txt")
+        }
+        newMenu.addBlockItem("Document RTF", enabled: inFolder, symbol: "doc.richtext") {
+            model.newFile(named: "Nouveau document.rtf")
+        }
+        let newItem = NSMenuItem(title: "Nouveau", action: nil, keyEquivalent: "")
+        newItem.submenu = newMenu
+        menu.addItem(newItem)
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Coller", enabled: inFolder && FileClipboard.shared.canPaste, symbol: "doc.on.clipboard") {
+            model.paste()
+        }
+        menu.addBlockItem("Coller un raccourci", enabled: inFolder && FileClipboard.shared.canPaste) {
+            model.pasteShortcut()
+        }
+        menu.addItem(.separator())
+
+        let sortMenu = NSMenu()
+        for key in SortKey.allCases {
+            let item = sortMenu.addBlockItem(key.title) { tab.toggleSort(key) }
+            item.state = tab.settings.sortKey == key ? .on : .off
+        }
+        let sortItem = NSMenuItem(title: "Trier par", action: nil, keyEquivalent: "")
+        sortItem.submenu = sortMenu
+        menu.addItem(sortItem)
+
+        let groupMenu = NSMenu()
+        for key in GroupKey.allCases {
+            let item = groupMenu.addBlockItem(key.title) { tab.update { $0.groupKey = key } }
+            item.state = tab.settings.groupKey == key ? .on : .off
+        }
+        let groupItem = NSMenuItem(title: "Grouper par", action: nil, keyEquivalent: "")
+        groupItem.submenu = groupMenu
+        menu.addItem(groupItem)
+
+        let viewMenu = NSMenu()
+        for mode in ViewMode.allCases {
+            let item = viewMenu.addBlockItem(mode.title) { tab.update { $0.viewMode = mode } }
+            item.state = tab.settings.viewMode == mode ? .on : .off
+        }
+        let viewItem = NSMenuItem(title: "Affichage", action: nil, keyEquivalent: "")
+        viewItem.submenu = viewMenu
+        menu.addItem(viewItem)
+
+        menu.addItem(.separator())
+        let hidden = menu.addBlockItem("Afficher les elements masques") {
+            AppSettings.shared.toggleHiddenItems()
+        }
+        hidden.state = AppSettings.shared.showHiddenItems ? .on : .off
+        menu.addBlockItem("Actualiser", symbol: "arrow.clockwise") { tab.reload() }
+        if let folder = model.currentFolder, folder.lastPathComponent == ".Trash" {
+            menu.addItem(.separator())
+            menu.addBlockItem("Vider la corbeille...", symbol: "trash.slash") { model.emptyTrash() }
+        }
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Afficher dans le Finder") { model.revealInFinder() }
+        menu.addBlockItem("Proprietes du dossier", enabled: inFolder) { model.showFolderInfoWindow() }
+    }
+
+    // MARK: - Clic sur une selection
+
+    private static func buildSelectionMenu(_ menu: NSMenu, items: [FileItem],
+                                           model: WindowModel, anchorView: NSView) {
+        let single = items.count == 1 ? items[0] : nil
+        let urls = items.map(\.url)
+        let hasFolder = items.contains { $0.isNavigableContainer }
+
+        menu.addBlockItem("Ouvrir", symbol: "arrow.up.forward.app") { model.activate(items) }
+
+        if hasFolder {
+            menu.addBlockItem("Ouvrir dans un nouvel onglet") {
+                items.filter { $0.isNavigableContainer }.forEach { model.openInNewTab($0.url) }
+            }
+            menu.addBlockItem("Ouvrir dans une nouvelle fenetre") {
+                items.filter { $0.isNavigableContainer }.forEach { model.openInNewWindow($0.url) }
+            }
+        }
+
+        if let single, !single.isNavigableContainer {
+            let apps = OpenWith.applications(for: single.url)
+            if !apps.isEmpty {
+                let sub = NSMenu()
+                for app in apps {
+                    let icon = NSWorkspace.shared.icon(forFile: app.path)
+                    icon.size = NSSize(width: 16, height: 16)
+                    let item = BlockMenuItem(title: OpenWith.name(of: app), image: icon) {
+                        model.openWith(application: app)
+                    }
+                    sub.addItem(item)
+                }
+                sub.addItem(.separator())
+                sub.addBlockItem("Autre application...") { OpenWith.chooseApplication(model: model) }
+                let openWith = NSMenuItem(title: "Ouvrir avec", action: nil, keyEquivalent: "")
+                openWith.submenu = sub
+                menu.addItem(openWith)
+            }
+        }
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Coup d'oeil", symbol: "eye") { QuickLookCoordinator.shared.toggle(urls: urls) }
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Couper", symbol: "scissors") { model.cutSelection() }
+        menu.addBlockItem("Copier", symbol: "doc.on.doc") { model.copySelection() }
+        if hasFolder, let single, single.isNavigableContainer {
+            menu.addBlockItem("Coller dans ce dossier", enabled: FileClipboard.shared.canPaste) {
+                FileClipboard.shared.paste(into: single.url, undoManager: model.undoManager)
+            }
+        }
+        menu.addBlockItem("Copier le chemin d'acces") { model.copySelectionPaths() }
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Renommer", enabled: items.count == 1, symbol: "pencil") {
+            model.beginRenameSelection()
+        }
+        menu.addBlockItem("Dupliquer", symbol: "plus.square.on.square") { model.duplicateSelection() }
+        menu.addBlockItem("Creer un alias", symbol: "arrowshape.turn.up.left") { model.makeAliasForSelection() }
+        menu.addBlockItem("Compresser", symbol: "archivebox") { model.compressSelection() }
+
+        menu.addItem(.separator())
+        let tagsMenu = NSMenu()
+        let currentTags = Set(items.flatMap { $0.tagNames })
+        for tag in TagManager.knownTags {
+            let item = tagsMenu.addBlockItem(tag) { model.toggleTag(tag) }
+            item.state = currentTags.contains(tag) ? .on : .off
+            if let color = SidebarCatalog.color(forTag: tag) {
+                item.image = dot(color)
+            }
+        }
+        tagsMenu.addItem(.separator())
+        tagsMenu.addBlockItem("Nouveau tag...") { model.promptForNewTag() }
+        let tagsItem = NSMenuItem(title: "Tags", action: nil, keyEquivalent: "")
+        tagsItem.submenu = tagsMenu
+        menu.addItem(tagsItem)
+
+        menu.addBlockItem("Partager...", symbol: "square.and.arrow.up") {
+            model.shareSelection()
+        }
+
+        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
+        servicesItem.submenu = NSMenu()
+        menu.addItem(servicesItem)
+        NSApp.servicesMenu = servicesItem.submenu
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Placer dans la corbeille", symbol: "trash") { model.trashSelection() }
+        menu.addBlockItem("Supprimer definitivement", symbol: "trash.slash") { model.deleteSelectionPermanently() }
+
+        menu.addItem(.separator())
+        menu.addBlockItem("Afficher dans le Finder") { model.revealInFinder() }
+        menu.addBlockItem("Proprietes", symbol: "info.circle") { model.showInfoWindow() }
+    }
+
+    private static func dot(_ color: NSColor) -> NSImage {
+        let size = NSSize(width: 12, height: 12)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        color.setFill()
+        NSBezierPath(ovalIn: NSRect(x: 2, y: 2, width: 8, height: 8)).fill()
+        image.unlockFocus()
+        return image
+    }
+}
+
+private extension BlockMenuItem {
+    convenience init(title: String, image: NSImage?, handler: @escaping () -> Void) {
+        self.init(title: title, keyEquivalent: "", modifiers: .command, enabled: true,
+                  image: image, handler: handler)
+    }
+}

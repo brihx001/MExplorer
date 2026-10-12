@@ -1,0 +1,53 @@
+#!/bin/bash
+# Construit MExplorer.app (bundle signe ad-hoc avec le sandbox actif).
+set -euo pipefail
+cd "$(dirname "$0")"
+
+CONFIG="${1:-debug}"
+APP="MExplorer.app"
+BIN=".build/${CONFIG}/MExplorer"
+
+# Contraintes de toolchain sans Xcode selectionne (macOS 27 / Swift 6.4) :
+#  - le systeme de compilation par defaut (swiftbuild) echoue avec les seuls
+#    Command Line Tools, y compris sur un paquet vide ("Unknown error parsing
+#    property list") ; le systeme natif, lui, fonctionne ;
+#  - les macros SwiftUI (@State, @Observable...) sont fournies par un greffon
+#    livre uniquement avec Xcode, absent des Command Line Tools.
+BUILD_ARGS=()
+if swift build --build-system native --help >/dev/null 2>&1; then
+  BUILD_ARGS+=(--build-system native)
+fi
+
+MACRO_PLUGINS="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"
+if [ -f "${MACRO_PLUGINS}/libSwiftUIMacros.dylib" ]; then
+  BUILD_ARGS+=(-Xswiftc -plugin-path -Xswiftc "${MACRO_PLUGINS}")
+elif ! [ -f "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib" ]; then
+  echo "ATTENTION : greffon de macros SwiftUI introuvable." >&2
+  echo "Installez Xcode, ou selectionnez-le : sudo xcode-select -s /Applications/Xcode.app" >&2
+fi
+
+echo "==> swift build (${CONFIG})"
+swift build -c "${CONFIG}" "${BUILD_ARGS[@]}"
+
+echo "==> assemblage du bundle"
+rm -rf "${APP}"
+mkdir -p "${APP}/Contents/MacOS" "${APP}/Contents/Resources"
+cp "${BIN}" "${APP}/Contents/MacOS/MExplorer"
+cp Packaging/Info.plist "${APP}/Contents/Info.plist"
+if [ -f Packaging/AppIcon.icns ]; then
+  cp Packaging/AppIcon.icns "${APP}/Contents/Resources/AppIcon.icns"
+else
+  echo "ATTENTION : Packaging/AppIcon.icns absent." >&2
+  echo "Regenerez-la : cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output ../AppIcon.icns AppIcon.iconset" >&2
+fi
+printf 'APPL????' > "${APP}/Contents/PkgInfo"
+
+echo "==> signature ad-hoc + entitlements"
+codesign --force --sign - \
+  --entitlements Packaging/MExplorer.entitlements \
+  --options runtime \
+  --timestamp=none \
+  "${APP}"
+
+codesign --verify --verbose=2 "${APP}" 2>&1 | sed 's/^/    /'
+echo "==> OK : $(pwd)/${APP}"

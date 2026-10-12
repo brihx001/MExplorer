@@ -1,0 +1,11 @@
+# Compilation
+.build/
+.swiftpm/
+DerivedData/
+*.app
+
+# Artefacts intermediaires de l'icone (regeneres par make-icon.swift)
+Packaging/Icon/AppIcon.iconset/
+
+# macOS
+.DS_Store

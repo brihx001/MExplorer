@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilation macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versions de la toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Construire le bundle
+        run: ./build.sh release
+
+      - name: Verifier la signature et les entitlements
+        run: |
+          codesign --verify --verbose=2 MExplorer.app
+          codesign --display --entitlements - MExplorer.app
