@@ -278,7 +278,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     }
 
     private func loadRecents(token: Int) {
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let cutoff = Date().addingTimeInterval(-30 * 86_400)
             var found: [FileItem] = []
             for root in [SidebarCatalog.home] {
@@ -296,7 +296,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
                 }
             }
             let sorted = found.sorted { ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast) }
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async {
                 guard let self, token == self.loadToken else { return }
                 self.isLoading = false
                 self.items = Array(sorted.prefix(500))
@@ -311,7 +311,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         guard items.count <= 3000, !items.isEmpty else { return }
         let directories = items.filter { $0.isNavigableContainer }
 
-        DispatchQueue.global(qos: .utility).async {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             var tagged: [(FileItem, [String], Int)] = []
             for item in items {
                 guard let v = try? item.url.resourceValues(forKeys: [.tagNamesKey, .labelNumberKey]) else { continue }
@@ -320,7 +320,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
                 if !tags.isEmpty || label != 0 { tagged.append((item, tags, label)) }
             }
             if !tagged.isEmpty {
-                DispatchQueue.main.async { [weak self] in
+                DispatchQueue.main.async {
                     guard let self, token == self.loadToken else { return }
                     for (item, tags, label) in tagged {
                         item.tagNames = tags
@@ -340,7 +340,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
                 renamed.append((item, name))
             }
             guard !renamed.isEmpty else { return }
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async {
                 guard let self, token == self.loadToken else { return }
                 for (item, name) in renamed { item.displayName = name }
                 self.rebuildRows()
