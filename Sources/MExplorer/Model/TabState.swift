@@ -237,17 +237,20 @@ final class TabState: NSObject, ObservableObject, Identifiable {
 
         case .recents:
             isLoading = true
+            if !items.isEmpty {
+                items = []
+                rebuildRows()
+            }
             let s = SpotlightSearch(onUpdate: { [weak self] found in
                 guard let self, token == self.loadToken else { return }
-                self.items = found
+                self.items = Self.recentsOrder(found)
                 self.rebuildRows()
             }, onFinish: { [weak self] in
                 guard let self, token == self.loadToken else { return }
                 self.isLoading = false
             })
             search = s
-            s.start(text: "", scope: nil, includeContent: false)
-            loadRecents(token: token)
+            s.startRecents(within: 30, scope: SidebarCatalog.home)
 
         case .search(let text, let scope):
             isLoading = true
@@ -277,32 +280,12 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         }
     }
 
-    private func loadRecents(token: Int) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let cutoff = Date().addingTimeInterval(-30 * 86_400)
-            var found: [FileItem] = []
-            for root in [SidebarCatalog.home] {
-                guard let e = FileManager.default.enumerator(
-                    at: root, includingPropertiesForKeys: FileItem.resourceKeys,
-                    options: [.skipsHiddenFiles, .skipsPackageDescendants],
-                    errorHandler: { _, _ in true }) else { continue }
-                for case let url as URL in e {
-                    guard let v = try? url.resourceValues(forKeys: Set(FileItem.resourceKeys)) else { continue }
-                    if v.isDirectory == true { continue }
-                    if let d = v.contentModificationDate, d > cutoff {
-                        found.append(FileItem(url: url, values: v))
-                    }
-                    if found.count > 800 { break }
-                }
-            }
-            let sorted = found.sorted { ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast) }
-            DispatchQueue.main.async {
-                guard let self, token == self.loadToken else { return }
-                self.isLoading = false
-                self.items = Array(sorted.prefix(500))
-                self.rebuildRows()
-            }
-        }
+    /// Spotlight renvoie les resultats dans un ordre quelconque et inclut les
+    /// dossiers : on garde les fichiers, du plus recent au plus ancien.
+    private static func recentsOrder(_ found: [FileItem]) -> [FileItem] {
+        let files = found.filter { !$0.isDirectory }
+            .sorted { ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast) }
+        return Array(files.prefix(500))
     }
 
     /// Seconde passe : tags, labels et noms localises sont lus hors du

@@ -15,6 +15,8 @@ final class SidebarNode: NSObject {
     /// nil tant que le contenu n'a pas ete lu.
     var children: [SidebarNode]?
     var isLoading = false
+    /// Volume amovible : la ligne affiche alors un bouton d'ejection.
+    var isEjectable = false
 
     /// Titre fixe (en-tetes, tags, noms imposes). Pour un dossier sans titre
     /// impose, le libelle est relu a chaque affichage depuis DisplayNameCache :
@@ -59,27 +61,59 @@ final class SidebarNode: NSObject {
     func loadChildrenIfNeeded() {
         guard children == nil else { return }
         guard let url, kind != .header else { children = children ?? []; return }
+        children = Self.subfolders(of: url).map { child in
+            let node = SidebarNode(folderAt: child)
+            node.parent = self
+            return node
+        }
+    }
+
+    /// Relit le dossier et fusionne avec les noeuds existants : ceux qui sont
+    /// toujours la sont conserves tels quels, pour que NSOutlineView garde leur
+    /// etat deplie. Renvoie vrai si la liste a change.
+    @discardableResult
+    func refreshChildren() -> Bool {
+        guard let url, kind != .header else { return false }
+        let previous = children ?? []
+        var byPath: [String: SidebarNode] = [:]
+        for node in previous {
+            if let u = node.url { byPath[u.standardizedFileURL.path] = node }
+        }
+
+        var merged: [SidebarNode] = []
+        for child in Self.subfolders(of: url) {
+            if let existing = byPath[child.standardizedFileURL.path] {
+                merged.append(existing)
+            } else {
+                let node = SidebarNode(folderAt: child)
+                node.parent = self
+                merged.append(node)
+            }
+        }
+
+        let changed = merged.count != previous.count
+            || zip(merged, previous).contains { $0 !== $1 }
+        children = merged
+        Self.noteSubdirectories(url, found: !merged.isEmpty)
+        return changed
+    }
+
+    func invalidateChildren() {
+        children = nil
+    }
+
+    /// Sous-dossiers visibles, tries comme le Finder.
+    private static func subfolders(of url: URL) -> [URL] {
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey, .isPackageKey],
             options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
         )) ?? []
-        let folders = contents.filter { child in
+        return contents.filter { child in
             let v = try? child.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
             return v?.isDirectory == true && v?.isPackage != true
         }
         .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-
-        let nodes = folders.map { child -> SidebarNode in
-            let node = SidebarNode(folderAt: child)
-            node.parent = self
-            return node
-        }
-        children = nodes
-    }
-
-    func invalidateChildren() {
-        children = nil
     }
 
     // MARK: - Detection de sous-dossiers (asynchrone)
@@ -130,6 +164,13 @@ final class SidebarNode: NSObject {
             if scanned > 400 { break }
         }
         return false
+    }
+
+    /// Met a jour le cache d'expansion apres une lecture reelle du dossier :
+    /// un dossier qui vient de recevoir son premier sous-dossier doit devenir
+    /// depliable sans attendre une nouvelle sonde.
+    static func noteSubdirectories(_ url: URL, found: Bool) {
+        subdirCache[url.standardizedFileURL.path] = found
     }
 
     static func flushSubdirectoryCache() {

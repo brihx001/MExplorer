@@ -17,20 +17,38 @@ final class SpotlightSearch {
 
     /// `scope` limite la recherche a un dossier ; nil = tout ce qui est indexe et accessible.
     func start(text: String, scope: URL?, includeContent: Bool) {
-        stop()
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else { stop(); return }
 
-        let q = NSMetadataQuery()
         let escaped = trimmed.replacingOccurrences(of: "\"", with: "\\\"")
         var format = "(kMDItemFSName LIKE[cd] \"*\(escaped)*\")"
         if includeContent {
             format += " || (kMDItemTextContent LIKE[cd] \"*\(escaped)*\")"
             format += " || (kMDItemDisplayName LIKE[cd] \"*\(escaped)*\")"
         }
+        run(format,
+            scopes: scope.map { [$0] } ?? [NSMetadataQueryLocalComputerScope],
+            sort: [NSSortDescriptor(key: NSMetadataItemFSNameKey, ascending: true)])
+    }
+
+    /// Elements ouverts ou modifies dans les `days` derniers jours.
+    /// L'index Spotlight repond en une fraction de seconde la ou une
+    /// enumeration recursive du dossier personnel prend plusieurs minutes.
+    func startRecents(within days: Int, scope: URL) {
+        let seconds = max(1, days) * 86_400
+        let format = "(kMDItemLastUsedDate >= $time.now(-\(seconds)))"
+            + " || (kMDItemFSContentChangeDate >= $time.now(-\(seconds)))"
+        run(format,
+            scopes: [scope],
+            sort: [NSSortDescriptor(key: NSMetadataItemFSContentChangeDateKey, ascending: false)])
+    }
+
+    private func run(_ format: String, scopes: [Any], sort: [NSSortDescriptor]) {
+        stop()
+        let q = NSMetadataQuery()
         q.predicate = NSPredicate(fromMetadataQueryString: format)
-        q.searchScopes = scope.map { [$0] } ?? [NSMetadataQueryLocalComputerScope]
-        q.sortDescriptors = [NSSortDescriptor(key: NSMetadataItemFSNameKey, ascending: true)]
+        q.searchScopes = scopes
+        q.sortDescriptors = sort
         q.notificationBatchingInterval = 0.4
 
         let center = NotificationCenter.default

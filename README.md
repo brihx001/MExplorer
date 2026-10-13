@@ -100,7 +100,10 @@ pour cela.
   ressort »), ce qui permet de deposer dans la liste plutot que sur l'onglet.
 - **Volet de navigation** : arborescence reelle et depliable a l'infini
   (Acces rapide, iCloud, Ce Mac, Emplacements, Tags, Recents, Corbeille).
-  Le dossier courant est revele et selectionne automatiquement.
+  Le dossier courant est revele et selectionne automatiquement. Les dossiers
+  deplies sont surveilles : une creation, une suppression ou un renommage, fait
+  dans l'application ou ailleurs, apparait dans l'arborescence sans rien
+  replier. Les volumes amovibles portent un bouton d'ejection.
 - **Barre de commandes** : Nouveau, Couper, Copier, Coller, Renommer, Partager,
   Corbeille, Trier, Afficher, menu « ... ».
 - **Barre d'adresse** : boutons Precedent / Suivant / Parent / Actualiser,
@@ -159,7 +162,10 @@ pour cela.
   proprietaire, tags editables, applications associees.
 - **Annulation** (Cmd Z) sur renommage, deplacement, copie, duplication,
   creation et mise a la corbeille.
-- **Volumes** : detection des montages/demontages, ejection.
+- **Volumes** : detection des montages/demontages, ejection d'un clic depuis la
+  barre laterale ou par le menu contextuel.
+- **Recents** : les elements ouverts ou modifies depuis trente jours, par
+  l'index Spotlight (`kMDItemLastUsedDate`, `kMDItemFSContentChangeDate`).
 - Rafraichissement automatique du dossier affiche (surveillance FSEvents).
 
 ## Raccourcis principaux

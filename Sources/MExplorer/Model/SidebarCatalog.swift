@@ -94,6 +94,26 @@ enum SidebarCatalog {
 
     static let volumesChanged = Notification.Name("com.jerome.mexplorer.volumesChanged")
 
+    /// Vrai si le volume peut etre ejecte (support amovible, disque externe).
+    ///
+    /// Les cles DiskArbitration (`volumeIsEjectable`, `volumeIsRemovable`,
+    /// `volumeIsInternal`) reviennent parfois toutes nil : c'est le cas d'un
+    /// disque USB en exFAT lu depuis le bac a sable. On retombe alors sur la
+    /// seule information fiable : un volume monte dans /Volumes qui n'est pas
+    /// le disque de demarrage est ejectable.
+    static func isEjectable(_ url: URL) -> Bool {
+        guard url.resolvingSymlinksInPath().path != "/" else { return false }
+        let v = try? url.resourceValues(forKeys: [.volumeIsEjectableKey,
+                                                  .volumeIsRemovableKey,
+                                                  .volumeIsInternalKey])
+        if v?.volumeIsEjectable == true || v?.volumeIsRemovable == true { return true }
+        if v?.volumeIsInternal == false { return true }
+        if v?.volumeIsEjectable == nil, v?.volumeIsRemovable == nil, v?.volumeIsInternal == nil {
+            return url.standardizedFileURL.path.hasPrefix("/Volumes/")
+        }
+        return false
+    }
+
     // MARK: - Icones
 
     static func symbol(for url: URL) -> String {

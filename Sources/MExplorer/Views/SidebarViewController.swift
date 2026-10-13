@@ -10,6 +10,10 @@ final class SidebarViewController: NSViewController {
     private var roots: [SidebarNode] = []
     private var observers: [NSObjectProtocol] = []
     private var isSyncingSelection = false
+    /// Un surveillant par dossier deplie : sans cela, un dossier cree ailleurs
+    /// (ou dans la zone de fichiers) n'apparaissait jamais dans l'arborescence.
+    private var watchers: [String: DirectoryWatcher] = [:]
+    private static let maxWatchers = 64
 
     init(model: WindowModel) {
         self.model = model
@@ -18,7 +22,10 @@ final class SidebarViewController: NSViewController {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) non supporte") }
 
-    deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        watchers.values.forEach { $0.stop() }
+    }
 
     // MARK: - Cycle de vie
 
@@ -80,6 +87,11 @@ final class SidebarViewController: NSViewController {
         observers.append(center.addObserver(forName: AppSettings.favoritesChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuild()
         })
+        // Les surveillants couvrent deja les dossiers deplies, mais une creation
+        // faite depuis l'application doit se voir sans attendre l'anti-rebond.
+        observers.append(center.addObserver(forName: FileOperations.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.refreshWatchedFolders()
+        })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didMountNotification, object: nil, queue: .main) { _ in SidebarCatalog.refreshVolumes() })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
@@ -114,6 +126,67 @@ final class SidebarViewController: NSViewController {
         for root in roots { outlineView.expandItem(root) }
         restoreExpansion(expandedPaths)
         syncSelection(to: model.activeTab.location)
+        syncWatchers()
+    }
+
+    // MARK: - Suivi des dossiers affiches
+
+    /// Surveille les dossiers deplies, plus celui de l'onglet actif : c'est la
+    /// que les creations doivent apparaitre tout de suite.
+    private func syncWatchers() {
+        var wanted: [String: URL] = [:]
+        for row in 0..<outlineView.numberOfRows {
+            guard wanted.count < Self.maxWatchers else { break }
+            guard let node = outlineView.item(atRow: row) as? SidebarNode,
+                  node.kind != .header, let url = node.url,
+                  outlineView.isItemExpanded(node) else { continue }
+            wanted[url.standardizedFileURL.path] = url
+        }
+        if let url = model.activeTab.location.folderURL, wanted.count < Self.maxWatchers {
+            wanted[url.standardizedFileURL.path] = url
+        }
+
+        for (path, watcher) in watchers where wanted[path] == nil {
+            watcher.stop()
+            watchers.removeValue(forKey: path)
+        }
+        for (path, url) in wanted where watchers[path] == nil {
+            let watcher = DirectoryWatcher(interval: 0.4) { [weak self] in
+                self?.directoryChanged(path)
+            }
+            watcher.watch(url)
+            watchers[path] = watcher
+        }
+    }
+
+    private func directoryChanged(_ path: String) {
+        var reloaded = false
+        for node in nodes(forPath: path) where node.refreshChildren() {
+            outlineView.reloadItem(node, reloadChildren: true)
+            reloaded = true
+        }
+        if reloaded {
+            restoreExpansion(Set(expandedNodePaths()))
+            syncSelection(to: model.activeTab.location)
+            syncWatchers()
+        }
+    }
+
+    private func refreshWatchedFolders() {
+        for path in watchers.keys { directoryChanged(path) }
+    }
+
+    /// Un meme dossier peut figurer plusieurs fois (acces rapide et arborescence).
+    private func nodes(forPath path: String) -> [SidebarNode] {
+        var found: [SidebarNode] = []
+        func walk(_ nodes: [SidebarNode]) {
+            for node in nodes {
+                if node.url?.standardizedFileURL.path == path { found.append(node) }
+                if let children = node.children { walk(children) }
+            }
+        }
+        walk(roots)
+        return found
     }
 
     private func makeRoots() -> [SidebarNode] {
@@ -165,6 +238,7 @@ final class SidebarViewController: NSViewController {
                                        symbol: SidebarCatalog.symbol(for: item.url),
                                        location: .folder(item.url),
                                        url: item.url)
+                node.isEjectable = SidebarCatalog.isEjectable(item.url)
                 node.parent = header
                 return node
             }
@@ -227,6 +301,7 @@ final class SidebarViewController: NSViewController {
 
     /// Selectionne (et deplie) le noeud correspondant a l'emplacement courant.
     func syncSelection(to location: Location) {
+        defer { syncWatchers() }
         guard let url = location.folderURL else {
             if case .tag(let name) = location {
                 selectRow(where: { $0.kind == .tag && $0.title == name })
@@ -379,8 +454,7 @@ extension SidebarViewController: NSMenuDelegate {
             menu.addItem(withTitle: "Ajouter a l'acces rapide", action: #selector(menuAddToFavorites), keyEquivalent: "")
         }
 
-        if node.kind == .volume, let url = node.url,
-           (try? url.resourceValues(forKeys: [.volumeIsEjectableKey]))?.volumeIsEjectable == true {
+        if node.kind == .volume, node.isEjectable {
             menu.addItem(withTitle: "Ejecter", action: #selector(menuEject), keyEquivalent: "")
         }
 
@@ -473,6 +547,13 @@ extension SidebarViewController: NSOutlineViewDelegate {
             ?? SidebarCell(isHeader: node.isHeader, identifier: identifier)
 
         cell.textField?.stringValue = node.title
+        if let cell = cell as? SidebarCell {
+            if node.kind == .volume, node.isEjectable, let url = node.url {
+                cell.configureEject { [weak self] in self?.model.eject(url) }
+            } else {
+                cell.configureEject(nil)
+            }
+        }
         if node.isHeader {
             cell.imageView?.image = nil
         } else if node.kind == .tag {
@@ -501,13 +582,35 @@ extension SidebarViewController: NSOutlineViewDelegate {
         }
     }
 
+    func outlineViewItemDidExpand(_ notification: Notification) {
+        syncWatchers()
+    }
+
+    func outlineViewItemDidCollapse(_ notification: Notification) {
+        syncWatchers()
+    }
+
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
         ((item as? SidebarNode)?.isHeader ?? false) ? 22 : 24
     }
 }
 
-/// Cellule simple icone + libelle.
+/// Cellule simple icone + libelle, avec un bouton d'ejection optionnel.
 private final class SidebarCell: NSTableCellView {
+
+    private var ejectButton: NSButton?
+    private var ejectWidth: NSLayoutConstraint?
+    private var onEject: (() -> Void)?
+
+    /// Affiche ou masque le bouton d'ejection. Masque, il ne prend aucune
+    /// largeur : le libelle des lignes ordinaires n'est pas tronque plus tot.
+    func configureEject(_ action: (() -> Void)?) {
+        onEject = action
+        ejectButton?.isHidden = action == nil
+        ejectWidth?.constant = action == nil ? 0 : 16
+    }
+
+    @objc private func ejectClicked() { onEject?() }
 
     init(isHeader: Bool, identifier: NSUserInterfaceItemIdentifier) {
         super.init(frame: .zero)
@@ -535,13 +638,34 @@ private final class SidebarCell: NSTableCellView {
             icon.translatesAutoresizingMaskIntoConstraints = false
             addSubview(icon)
             imageView = icon
+
+            let eject = NSButton(image: NSImage(systemSymbolName: "eject.fill",
+                                                accessibilityDescription: "Ejecter") ?? NSImage(),
+                                 target: self, action: #selector(ejectClicked))
+            eject.isBordered = false
+            eject.bezelStyle = .inline
+            eject.imageScaling = .scaleProportionallyDown
+            eject.contentTintColor = .secondaryLabelColor
+            eject.toolTip = "Ejecter"
+            eject.isHidden = true
+            eject.setButtonType(.momentaryChange)
+            eject.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(eject)
+            ejectButton = eject
+            let width = eject.widthAnchor.constraint(equalToConstant: 0)
+            ejectWidth = width
+
             NSLayoutConstraint.activate([
                 icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
                 icon.centerYAnchor.constraint(equalTo: centerYAnchor),
                 icon.widthAnchor.constraint(equalToConstant: 18),
                 label.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 6),
-                label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
-                label.centerYAnchor.constraint(equalTo: centerYAnchor)
+                label.centerYAnchor.constraint(equalTo: centerYAnchor),
+                eject.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+                eject.centerYAnchor.constraint(equalTo: centerYAnchor),
+                eject.heightAnchor.constraint(equalToConstant: 16),
+                width,
+                label.trailingAnchor.constraint(lessThanOrEqualTo: eject.leadingAnchor, constant: -4)
             ])
         }
     }
