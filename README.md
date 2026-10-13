@@ -100,10 +100,15 @@ pour cela.
   ressort »), ce qui permet de deposer dans la liste plutot que sur l'onglet.
 - **Volet de navigation** : arborescence reelle et depliable a l'infini
   (Acces rapide, iCloud, Ce Mac, Emplacements, Tags, Recents, Corbeille).
-  Le dossier courant est revele et selectionne automatiquement. Les dossiers
+  Le dossier courant est revele et selectionne dans l'arborescence reelle,
+  meme quand on y arrive par un raccourci de l'acces rapide. Les dossiers
   deplies sont surveilles : une creation, une suppression ou un renommage, fait
   dans l'application ou ailleurs, apparait dans l'arborescence sans rien
-  replier. Les volumes amovibles portent un bouton d'ejection.
+  replier. Les volumes amovibles portent un bouton d'ejection. Le disque de
+  demarrage n'est liste qu'une fois, sous « Ce Mac ».
+- **Acces rapide** : un dossier lache sur l'en-tete (ou entre deux favoris)
+  devient un favori, a la position du depot. Le menu contextuel ajoute et
+  retire egalement.
 - **Barre de commandes** : Nouveau, Couper, Copier, Coller, Renommer, Partager,
   Corbeille, Trier, Afficher, menu « ... ».
 - **Barre d'adresse** : boutons Precedent / Suivant / Parent / Actualiser,
@@ -166,6 +171,8 @@ pour cela.
   barre laterale ou par le menu contextuel.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
   l'index Spotlight (`kMDItemLastUsedDate`, `kMDItemFSContentChangeDate`).
+  La bibliotheque personnelle est ecartee : ses caches et ses journaux
+  changent en permanence et noieraient les vrais documents.
 - Rafraichissement automatique du dossier affiche (surveillance FSEvents).
 
 ## Raccourcis principaux
@@ -266,8 +273,8 @@ cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output
 
 ## Limites actuelles
 
-- Le reordonnancement des favoris de l'Acces rapide par glisser-deposer n'est
-  pas implemente (ajout et retrait le sont).
+- Les favoris de l'Acces rapide s'ajoutent par glisser-deposer, mais un favori
+  deja present ne se deplace pas dans la liste par ce moyen.
 - Pas de « Remettre » depuis la corbeille (l'emplacement d'origine n'est pas
   accessible sous bac a sable).
 - La restauration de session ne retablit qu'une fenetre.

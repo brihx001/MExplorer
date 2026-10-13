@@ -66,10 +66,16 @@ final class AppSettings: ObservableObject {
         set { d.set(newValue, forKey: "favoritePaths") }
     }
 
-    func addFavorite(_ url: URL) {
+    /// `index` place le favori a cet endroit de la liste (depot entre deux
+    /// lignes de l'acces rapide) ; nil l'ajoute a la fin.
+    func addFavorite(_ url: URL, at index: Int? = nil) {
         var list = favoritePaths
         guard !list.contains(url.path) else { return }
-        list.append(url.path)
+        if let index, index >= 0, index <= list.count {
+            list.insert(url.path, at: index)
+        } else {
+            list.append(url.path)
+        }
         favoritePaths = list
         NotificationCenter.default.post(name: Self.favoritesChanged, object: nil)
     }

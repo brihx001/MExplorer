@@ -194,6 +194,7 @@ final class SidebarViewController: NSViewController {
 
         // Acces rapide
         let quick = SidebarNode(kind: .header, title: "Acces rapide", symbol: "star")
+        quick.isQuickAccess = true
         quick.children = AppSettings.shared.favoritePaths
             .map { URL(fileURLWithPath: $0) }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
@@ -215,6 +216,7 @@ final class SidebarViewController: NSViewController {
 
         // Ce Mac : arborescence reelle a partir du dossier personnel
         let thisMac = SidebarNode(kind: .header, title: "Ce Mac", symbol: "desktopcomputer")
+        thisMac.isRealTree = true
         var macChildren: [SidebarNode] = []
         let homeNode = SidebarNode(folderAt: SidebarCatalog.home)
         homeNode.parent = thisMac
@@ -228,10 +230,13 @@ final class SidebarViewController: NSViewController {
         thisMac.children = macChildren
         result.append(thisMac)
 
-        // Emplacements (volumes montes)
+        // Emplacements : les autres volumes. Le disque de demarrage figure deja
+        // sous "Ce Mac", l'afficher ici en ferait un doublon.
         let volumes = SidebarCatalog.mountedVolumes()
+            .filter { $0.url.resolvingSymlinksInPath().path != "/" }
         if !volumes.isEmpty {
             let header = SidebarNode(kind: .header, title: "Emplacements", symbol: "externaldrive")
+            header.isRealTree = true
             header.children = volumes.map { item in
                 let node = SidebarNode(kind: .volume,
                                        title: item.displayName,
@@ -296,7 +301,10 @@ final class SidebarViewController: NSViewController {
     }
 
     private func nodeKey(_ node: SidebarNode) -> String {
-        node.url?.path ?? "\(node.kind)|\(node.title)"
+        var root = node
+        while let parent = root.parent { root = parent }
+        let section = root.isHeader ? root.title : ""
+        return section + "|" + (node.url?.path ?? "\(node.kind)|\(node.title)")
     }
 
     /// Selectionne (et deplie) le noeud correspondant a l'emplacement courant.
@@ -308,48 +316,55 @@ final class SidebarViewController: NSViewController {
             }
             return
         }
-        if let row = rowForURL(url) {
-            select(row: row)
-            return
-        }
-        // Deplie progressivement depuis les racines pour atteindre l'URL.
-        guard revealPath(url) else { return }
+        // Meme quand le dossier figure dans l'acces rapide, on deplie
+        // l'arborescence reelle : un clic sur un favori doit montrer ou il se
+        // situe sous "Ce Mac" ou "Emplacements".
+        revealInTree(url)
         if let row = rowForURL(url) { select(row: row) }
     }
 
+    /// Deplie "Ce Mac" puis "Emplacements" jusqu'au dossier vise.
     @discardableResult
-    private func revealPath(_ url: URL) -> Bool {
+    private func revealInTree(_ url: URL) -> SidebarNode? {
         let target = url.standardizedFileURL.path
-        var progressed = true
-        var guardCount = 0
-        while progressed && guardCount < 40 {
-            guardCount += 1
-            progressed = false
-            for row in 0..<outlineView.numberOfRows {
-                guard let node = outlineView.item(atRow: row) as? SidebarNode,
-                      let nodeURL = node.url else { continue }
-                let nodePath = nodeURL.standardizedFileURL.path
-                if nodePath == target { return true }
-                if target.hasPrefix(nodePath == "/" ? "/" : nodePath + "/"),
-                   !outlineView.isItemExpanded(node) {
-                    outlineView.expandItem(node)
-                    progressed = true
-                    break
-                }
-            }
+        for header in roots where header.isRealTree {
+            if let node = reveal(target, under: header) { return node }
         }
-        return rowForURL(url) != nil
+        return nil
     }
 
-    private func rowForURL(_ url: URL) -> Int? {
-        let target = url.standardizedFileURL.path
-        for row in 0..<outlineView.numberOfRows {
-            if let node = outlineView.item(atRow: row) as? SidebarNode,
-               node.url?.standardizedFileURL.path == target {
-                return row
+    private func reveal(_ target: String, under node: SidebarNode) -> SidebarNode? {
+        node.loadChildrenIfNeeded()
+        for child in node.children ?? [] {
+            guard let childURL = child.url else { continue }
+            let path = childURL.standardizedFileURL.path
+            if path == target {
+                outlineView.expandItem(node)
+                return child
+            }
+            if target.hasPrefix(path == "/" ? "/" : path + "/") {
+                outlineView.expandItem(node)
+                if let hit = reveal(target, under: child) { return hit }
             }
         }
         return nil
+    }
+
+    /// L'acces rapide contient des raccourcis vers des dossiers qui existent
+    /// aussi dans l'arborescence : c'est cette derniere ligne qu'on selectionne.
+    private func rowForURL(_ url: URL) -> Int? {
+        let target = url.standardizedFileURL.path
+        var shortcut: Int?
+        for row in 0..<outlineView.numberOfRows {
+            guard let node = outlineView.item(atRow: row) as? SidebarNode,
+                  node.url?.standardizedFileURL.path == target else { continue }
+            if node.isUnderQuickAccess {
+                if shortcut == nil { shortcut = row }
+            } else {
+                return row
+            }
+        }
+        return shortcut
     }
 
     private func selectRow(where predicate: (SidebarNode) -> Bool) {
@@ -504,19 +519,50 @@ extension SidebarViewController: NSOutlineViewDataSource {
                      validateDrop info: NSDraggingInfo,
                      proposedItem item: Any?,
                      proposedChildIndex index: Int) -> NSDragOperation {
-        guard let node = item as? SidebarNode, let url = node.url, node.kind != .header else { return [] }
-        guard FileClipboard.shared.pasteboardURLsIn(info.draggingPasteboard).isEmpty == false else { return [] }
-        _ = url
+        guard let node = item as? SidebarNode else { return [] }
+        let urls = FileClipboard.shared.pasteboardURLsIn(info.draggingPasteboard)
+        guard !urls.isEmpty else { return [] }
+
+        // Depot sur l'en-tete "Acces rapide" (ou entre deux de ses lignes) :
+        // les dossiers deposes deviennent des favoris.
+        if node.isQuickAccess {
+            guard Self.containsFolder(urls) else { return [] }
+            // Pas .link : la source d'un glissement interne n'autorise que
+            // .copy et .move, un .link serait refuse avant d'arriver au depot.
+            return .copy
+        }
+
+        guard node.url != nil, node.kind != .header else { return [] }
         return info.draggingSourceOperationMask.contains(.move) ? .move : .copy
+    }
+
+    /// Lecture bornee : la validation est appelee a chaque mouvement de souris.
+    private static func containsFolder(_ urls: [URL]) -> Bool {
+        urls.prefix(50).contains { url in
+            (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+        }
     }
 
     func outlineView(_ outlineView: NSOutlineView,
                      acceptDrop info: NSDraggingInfo,
                      item: Any?,
                      childIndex index: Int) -> Bool {
-        guard let node = item as? SidebarNode, let destination = node.url else { return false }
+        guard let node = item as? SidebarNode else { return false }
         let urls = FileClipboard.shared.pasteboardURLsIn(info.draggingPasteboard)
         guard !urls.isEmpty else { return false }
+
+        if node.isQuickAccess {
+            var insertion = index
+            var added = false
+            for url in urls where (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                AppSettings.shared.addFavorite(url, at: insertion >= 0 ? insertion : nil)
+                if insertion >= 0 { insertion += 1 }
+                added = true
+            }
+            return added
+        }
+
+        guard let destination = node.url else { return false }
         let move = NSEvent.modifierFlags.contains(.command) || info.draggingSourceOperationMask.contains(.move)
         FileOperations.shared.drop(urls, into: destination, kind: move ? .move : .copy,
                                    undoManager: model.undoManager) { [weak self] _, error in

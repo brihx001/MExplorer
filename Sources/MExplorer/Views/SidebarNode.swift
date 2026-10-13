@@ -17,6 +17,21 @@ final class SidebarNode: NSObject {
     var isLoading = false
     /// Volume amovible : la ligne affiche alors un bouton d'ejection.
     var isEjectable = false
+    /// En-tete "Acces rapide" : accepte le depot de dossiers a mettre en favori.
+    var isQuickAccess = false
+    /// En-tete d'une arborescence reelle ("Ce Mac", "Emplacements") : c'est la
+    /// qu'un dossier est revele, pas dans les raccourcis de l'acces rapide.
+    var isRealTree = false
+
+    /// Vrai si le noeud se trouve sous l'en-tete "Acces rapide".
+    var isUnderQuickAccess: Bool {
+        var node: SidebarNode? = self
+        while let current = node {
+            if current.isQuickAccess { return true }
+            node = current.parent
+        }
+        return false
+    }
 
     /// Titre fixe (en-tetes, tags, noms imposes). Pour un dossier sans titre
     /// impose, le libelle est relu a chaque affichage depuis DisplayNameCache :

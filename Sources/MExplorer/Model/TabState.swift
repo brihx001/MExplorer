@@ -47,9 +47,9 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     // MARK: - Interne
 
     private var loadToken = 0
-    /// Dernier dossier dont le contenu a ete demande, pour distinguer un
-    /// changement de repertoire d'un simple rafraichissement.
-    private var requestedFolder: URL?
+    /// Dernier emplacement dont le contenu a ete demande, pour distinguer un
+    /// changement de dossier d'un simple rafraichissement.
+    private var requestedLocation: Location?
     private var nameObserver: NSObjectProtocol?
     private var sizeObserver: NSObjectProtocol?
     private var hiddenObserver: NSObjectProtocol?
@@ -169,20 +169,19 @@ final class TabState: NSObject, ObservableObject, Identifiable {
 
     private func load(preservingSelection: Bool = false) {
         // Sur un volume lent (partage reseau), le listing peut mettre plusieurs
-        // secondes : on vide la liste des que le dossier change, sinon la barre
-        // d'etat decrirait encore le dossier precedent. Ce vidage previent les
-        // vues, donc il doit avoir lieu avant la prise du jeton : un
-        // rechargement declenche en cascade garde ainsi un jeton coherent.
-        if case .folder(let url) = location {
-            if requestedFolder != url {
-                requestedFolder = url
-                if !items.isEmpty {
-                    items = []
-                    rebuildRows()
-                }
+        // secondes : on vide la liste des que l'emplacement change, sinon la
+        // barre d'etat decrirait encore le dossier precedent. Ce vidage
+        // previent les vues, donc l'etat "en cours de chargement" doit deja
+        // etre pose (sans quoi la zone de fichiers affiche brievement "Ce
+        // dossier est vide"), et il doit avoir lieu avant la prise du jeton :
+        // un rechargement declenche en cascade garde ainsi un jeton coherent.
+        isLoading = true
+        if requestedLocation != location {
+            requestedLocation = location
+            if !items.isEmpty {
+                items = []
+                rebuildRows()
             }
-        } else {
-            requestedFolder = nil
         }
 
         loadToken &+= 1
@@ -196,7 +195,6 @@ final class TabState: NSObject, ObservableObject, Identifiable {
 
         switch location {
         case .folder(let url):
-            isLoading = true
             startWatching(url)
             DirectoryLister.list(url, showHidden: AppSettings.shared.showHiddenItems, token: token) { [weak self] t, result in
                 guard let self, t == self.loadToken else { return }
@@ -217,7 +215,6 @@ final class TabState: NSObject, ObservableObject, Identifiable {
             }
 
         case .thisMac:
-            isLoading = true
             items = SidebarCatalog.mountedVolumes()
             rebuildRows()
             SidebarCatalog.refreshVolumes { [weak self] volumes in
@@ -236,11 +233,6 @@ final class TabState: NSObject, ObservableObject, Identifiable {
             }
 
         case .recents:
-            isLoading = true
-            if !items.isEmpty {
-                items = []
-                rebuildRows()
-            }
             let s = SpotlightSearch(onUpdate: { [weak self] found in
                 guard let self, token == self.loadToken else { return }
                 self.items = Self.recentsOrder(found)
@@ -280,10 +272,18 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         }
     }
 
+    /// Bibliotheque personnelle : caches, cookies, journaux et conteneurs y
+    /// changent en permanence et noieraient les vrais documents recents.
+    private static let recentsExcluded: String = {
+        SidebarCatalog.home.appendingPathComponent("Library").standardizedFileURL.path + "/"
+    }()
+
     /// Spotlight renvoie les resultats dans un ordre quelconque et inclut les
     /// dossiers : on garde les fichiers, du plus recent au plus ancien.
     private static func recentsOrder(_ found: [FileItem]) -> [FileItem] {
-        let files = found.filter { !$0.isDirectory }
+        let files = found
+            .filter { !$0.isDirectory }
+            .filter { !$0.url.standardizedFileURL.path.hasPrefix(recentsExcluded) }
             .sorted { ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast) }
         return Array(files.prefix(500))
     }
