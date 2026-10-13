@@ -463,10 +463,15 @@ extension SidebarViewController: NSMenuDelegate {
         menu.addItem(withTitle: "Ouvrir dans une nouvelle fenetre", action: #selector(menuOpenInNewWindow), keyEquivalent: "")
         menu.addItem(.separator())
 
-        if node.kind == .favorite {
-            menu.addItem(withTitle: "Retirer de l'acces rapide", action: #selector(menuRemoveFromFavorites), keyEquivalent: "")
-        } else if node.url != nil {
-            menu.addItem(withTitle: "Ajouter a l'acces rapide", action: #selector(menuAddToFavorites), keyEquivalent: "")
+        // Le test porte sur la liste des favoris, pas sur la section cliquee :
+        // un dossier de l'arborescence deja mis en favori doit proposer de l'en
+        // retirer, pas de l'ajouter une seconde fois.
+        if let url = node.url {
+            if AppSettings.shared.favoritePaths.contains(url.path) {
+                menu.addItem(withTitle: "Retirer de l'acces rapide", action: #selector(menuRemoveFromFavorites), keyEquivalent: "")
+            } else {
+                menu.addItem(withTitle: "Ajouter a l'acces rapide", action: #selector(menuAddToFavorites), keyEquivalent: "")
+            }
         }
 
         if node.kind == .volume, node.isEjectable {
@@ -503,7 +508,7 @@ extension SidebarViewController: NSOutlineViewDataSource {
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
-        guard let node = item as? SidebarNode else { return false }
+        guard let node = item as? SidebarNode, node.kind != .favorite else { return false }
         if let children = node.children { return !children.isEmpty }
         return node.isExpandable
     }

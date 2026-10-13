@@ -67,8 +67,10 @@ final class SidebarNode: NSObject {
     var isExpandable: Bool {
         switch kind {
         case .header: return true
-        case .favorite, .folder, .volume: return url.map { Self.hasSubdirectories($0) } ?? false
-        case .tag, .special: return false
+        // L'acces rapide est une liste de raccourcis, pas une arborescence :
+        // la hierarchie se deplie sous "Ce Mac" ou "Emplacements".
+        case .favorite, .tag, .special: return false
+        case .folder, .volume: return url.map { Self.hasSubdirectories($0) } ?? false
         }
     }
 
@@ -88,7 +90,7 @@ final class SidebarNode: NSObject {
     /// etat deplie. Renvoie vrai si la liste a change.
     @discardableResult
     func refreshChildren() -> Bool {
-        guard let url, kind != .header else { return false }
+        guard let url, kind != .header, kind != .favorite else { return false }
         let previous = children ?? []
         var byPath: [String: SidebarNode] = [:]
         for node in previous {

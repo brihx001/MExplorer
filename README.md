@@ -106,9 +106,12 @@ pour cela.
   dans l'application ou ailleurs, apparait dans l'arborescence sans rien
   replier. Les volumes amovibles portent un bouton d'ejection. Le disque de
   demarrage n'est liste qu'une fois, sous « Ce Mac ».
-- **Acces rapide** : un dossier lache sur l'en-tete (ou entre deux favoris)
-  devient un favori, a la position du depot. Le menu contextuel ajoute et
-  retire egalement.
+- **Acces rapide** : une liste plate de raccourcis, sans chevron ni
+  sous-arborescence (la hierarchie se deplie sous « Ce Mac »). Un dossier
+  lache sur l'en-tete, ou entre deux favoris, devient un favori a la position
+  du depot. Les menus contextuels de la barre laterale et de la zone de
+  fichiers ajoutent et retirent egalement un dossier, l'entree proposee
+  dependant de sa presence dans la liste.
 - **Barre de commandes** : Nouveau, Couper, Copier, Coller, Renommer, Partager,
   Corbeille, Trier, Afficher, menu « ... ».
 - **Barre d'adresse** : boutons Precedent / Suivant / Parent / Actualiser,

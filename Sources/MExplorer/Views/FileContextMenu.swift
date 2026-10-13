@@ -98,11 +98,22 @@ enum FileContextMenu {
         menu.addBlockItem("Ouvrir", symbol: "arrow.up.forward.app") { model.activate(items) }
 
         if hasFolder {
+            let folders = items.filter { $0.isNavigableContainer }
             menu.addBlockItem("Ouvrir dans un nouvel onglet") {
-                items.filter { $0.isNavigableContainer }.forEach { model.openInNewTab($0.url) }
+                folders.forEach { model.openInNewTab($0.url) }
             }
             menu.addBlockItem("Ouvrir dans une nouvelle fenetre") {
-                items.filter { $0.isNavigableContainer }.forEach { model.openInNewWindow($0.url) }
+                folders.forEach { model.openInNewWindow($0.url) }
+            }
+            let favorites = Set(AppSettings.shared.favoritePaths)
+            if folders.allSatisfy({ favorites.contains($0.url.path) }) {
+                menu.addBlockItem("Retirer de l'acces rapide", symbol: "star.slash") {
+                    folders.forEach { AppSettings.shared.removeFavorite($0.url) }
+                }
+            } else {
+                menu.addBlockItem("Ajouter a l'acces rapide", symbol: "star") {
+                    folders.forEach { AppSettings.shared.addFavorite($0.url) }
+                }
             }
         }
 
