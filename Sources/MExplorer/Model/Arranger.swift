@@ -114,39 +114,39 @@ enum Arranger {
             return ("#", "Autres", 9999)
 
         case .kind:
-            if item.isNavigableContainer { return ("__folder", "Dossier de fichiers", 0) }
+            if item.isNavigableContainer { return ("__folder", L("Dossier de fichiers"), 0) }
             let k = item.kindDescription
             return (k, k, 1)
 
         case .tags:
-            guard let tag = item.tagNames.first else { return ("__none", "Sans tag", 9999) }
+            guard let tag = item.tagNames.first else { return ("__none", L("Sans tag"), 9999) }
             return (tag, tag, 0)
 
         case .size:
             guard let size = item.effectiveSize, !item.isNavigableContainer else {
-                return ("__folder", "Dossiers", 0)
+                return ("__folder", L("Dossiers"), 0)
             }
             switch size {
-            case 0:                     return ("s0", "Vide (0 octet)", 1)
-            case 1..<16_384:            return ("s1", "Minuscule (0 - 16 Ko)", 2)
-            case 16_384..<1_048_576:    return ("s2", "Petit (16 Ko - 1 Mo)", 3)
-            case 1_048_576..<134_217_728: return ("s3", "Moyen (1 - 128 Mo)", 4)
-            case 134_217_728..<1_073_741_824: return ("s4", "Grand (128 Mo - 1 Go)", 5)
-            case 1_073_741_824..<4_294_967_296: return ("s5", "Enorme (1 - 4 Go)", 6)
-            default:                    return ("s6", "Gigantesque (> 4 Go)", 7)
+            case 0:                     return ("s0", L("Vide (0 octet)"), 1)
+            case 1..<16_384:            return ("s1", L("Minuscule (0 - 16 Ko)"), 2)
+            case 16_384..<1_048_576:    return ("s2", L("Petit (16 Ko - 1 Mo)"), 3)
+            case 1_048_576..<134_217_728: return ("s3", L("Moyen (1 - 128 Mo)"), 4)
+            case 134_217_728..<1_073_741_824: return ("s4", L("Grand (128 Mo - 1 Go)"), 5)
+            case 1_073_741_824..<4_294_967_296: return ("s5", L("Enorme (1 - 4 Go)"), 6)
+            default:                    return ("s6", L("Gigantesque (> 4 Go)"), 7)
             }
 
         case .dateModified:
-            guard let d = item.modificationDate else { return ("__unknown", "Date inconnue", 9999) }
+            guard let d = item.modificationDate else { return ("__unknown", L("Date inconnue"), 9999) }
             let cal = Calendar.current
             let now = Date()
-            if cal.isDateInToday(d) { return ("d0", "Aujourd'hui", 0) }
-            if cal.isDateInYesterday(d) { return ("d1", "Hier", 1) }
+            if cal.isDateInToday(d) { return ("d0", L("Aujourd'hui"), 0) }
+            if cal.isDateInYesterday(d) { return ("d1", L("Hier"), 1) }
             let days = cal.dateComponents([.day], from: d, to: now).day ?? 0
-            if days < 7 { return ("d2", "La semaine derniere", 2) }
-            if days < 14 { return ("d3", "Il y a deux semaines", 3) }
-            if days < 31 { return ("d4", "Le mois dernier", 4) }
-            if days < 366 { return ("d5", "Cette annee", 5) }
+            if days < 7 { return ("d2", L("La semaine derniere"), 2) }
+            if days < 14 { return ("d3", L("Il y a deux semaines"), 3) }
+            if days < 31 { return ("d4", L("Le mois dernier"), 4) }
+            if days < 366 { return ("d5", L("Cette annee"), 5) }
             let year = cal.component(.year, from: d)
             return ("y\(year)", "\(year)", 6000 - year)
         }

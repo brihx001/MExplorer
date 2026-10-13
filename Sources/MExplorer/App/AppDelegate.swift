@@ -4,6 +4,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Les acces sandbox doivent etre restaures avant toute lecture de dossier.
+        // Avant toute construction d'interface : les menus et les fenetres
+        // lisent leurs libelles a l'instant ou ils sont crees.
+        L10n.apply(AppSettings.shared.language)
+        // Les menus sont construits une fois : il faut les refaire quand la
+        // langue change.
+        NotificationCenter.default.addObserver(forName: L10n.changed, object: nil, queue: .main) { _ in
+            MainMenu.install()
+        }
         AccessManager.shared.restoreAll()
 
         MainMenu.install()
@@ -69,15 +77,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Apres l'affichage de la fenetre, pour que l'alerte ne precede pas l'app.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             let alert = NSAlert()
-            alert.messageText = "Autoriser MExplorer a lire tout le disque"
+            alert.messageText = L("Autoriser MExplorer a lire tout le disque")
             alert.informativeText = [
-                "MExplorer fonctionne dans le bac a sable macOS : il ne voit que les dossiers que vous lui designez.",
-                "Choisissez le disque de demarrage dans la fenetre suivante pour lui donner acces a l'ensemble du disque. L'autorisation est conservee d'un lancement a l'autre.",
-                "Les dossiers proteges par macOS (Bureau, Documents, Telechargements) feront l'objet d'une demande separee au premier acces."
+                L("MExplorer fonctionne dans le bac a sable macOS : il ne voit que les dossiers que vous lui designez."),
+                L("Choisissez le disque de demarrage dans la fenetre suivante pour lui donner acces a l'ensemble du disque. L'autorisation est conservee d'un lancement a l'autre."),
+                L("Les dossiers proteges par macOS (Bureau, Documents, Telechargements) feront l'objet d'une demande separee au premier acces.")
             ].joined(separator: "\n\n")
-            alert.addButton(withTitle: "Choisir le disque...")
-            alert.addButton(withTitle: "Plus tard")
-            alert.addButton(withTitle: "Ne plus demander")
+            alert.addButton(withTitle: L("Choisir le disque..."))
+            alert.addButton(withTitle: L("Plus tard"))
+            alert.addButton(withTitle: L("Ne plus demander"))
 
             let window = WindowManager.shared.controllers.first?.window
             switch alert.runModal() {

@@ -10,6 +10,8 @@ import UniformTypeIdentifiers
 struct TabStripView: View {
 
     @ObservedObject var model: WindowModel
+    /// Redessine la vue quand la langue (ou un reglage global) change.
+    @ObservedObject private var appSettings = AppSettings.shared
     @State private var dragging: UUID?
     @State private var fileTarget: UUID?
 
@@ -55,7 +57,7 @@ struct TabStripView: View {
                     .frame(width: 26, height: 24)
             }
             .buttonStyle(.plain)
-            .help("Nouvel onglet (Cmd T)")
+            .help(L("Nouvel onglet (Cmd T)"))
             .padding(.trailing, 8)
         }
         .frame(height: 34)
@@ -68,14 +70,14 @@ struct TabStripView: View {
 
     @ViewBuilder
     private func tabMenu(index: Int) -> some View {
-        Button("Dupliquer l'onglet") { model.selectTab(at: index); model.duplicateTab() }
-        Button("Fermer l'onglet") { model.closeTab(at: index) }
-        Button("Fermer les autres onglets") { model.selectTab(at: index); model.closeOtherTabs() }
-        Button("Fermer les onglets a droite") { model.selectTab(at: index); model.closeTabsToTheRight() }
+        Button(L("Dupliquer l'onglet")) { model.selectTab(at: index); model.duplicateTab() }
+        Button(L("Fermer l'onglet")) { model.closeTab(at: index) }
+        Button(L("Fermer les autres onglets")) { model.selectTab(at: index); model.closeOtherTabs() }
+        Button(L("Fermer les onglets a droite")) { model.selectTab(at: index); model.closeTabsToTheRight() }
         Divider()
-        Button("Deplacer vers une nouvelle fenetre") { model.moveTabToNewWindow(at: index) }
+        Button(L("Deplacer vers une nouvelle fenetre")) { model.moveTabToNewWindow(at: index) }
             .disabled(model.tabs.count < 2)
-        Button("Ouvrir dans une nouvelle fenetre") {
+        Button(L("Ouvrir dans une nouvelle fenetre")) {
             WindowManager.shared.openWindow(at: model.tabs[index].location)
         }
     }

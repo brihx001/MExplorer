@@ -22,7 +22,7 @@ struct VolumeUsage: Equatable {
     }
 
     var summary: String {
-        "\(name) : \(Fmt.size(used)) utilises sur \(Fmt.size(total)) (\(percentText))"
+        L("%@ : %@ utilises sur %@ (%@)", name, Fmt.size(used), Fmt.size(total), percentText)
     }
 
     /// Lecture bloquante : a appeler hors du thread principal.
@@ -41,7 +41,7 @@ struct VolumeUsage: Equatable {
         let plain = Int64(values.volumeAvailableCapacity ?? 0)
         let available = min(Int64(total), max(important, plain))
 
-        return VolumeUsage(name: values.volumeName ?? "Disque",
+        return VolumeUsage(name: values.volumeName ?? L("Disque"),
                            total: Int64(total),
                            available: available)
     }

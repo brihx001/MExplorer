@@ -6,6 +6,8 @@ import AppKit
 struct AddressBarView: View {
 
     @ObservedObject var model: WindowModel
+    /// Redessine la vue quand la langue (ou un reglage global) change.
+    @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var names = DisplayNameCache.shared
     @ObservedObject private var subfolders = SubfolderCache.shared
     @State private var editedPath: String = ""
@@ -16,12 +18,12 @@ struct AddressBarView: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            navButton("chevron.left", enabled: tab.canGoBack, help: "Precedent (Cmd [)") { tab.goBack() }
+            navButton("chevron.left", enabled: tab.canGoBack, help: L("Precedent (Cmd [)")) { tab.goBack() }
                 .contextMenu { historyMenu(entries: tab.backEntries()) }
-            navButton("chevron.right", enabled: tab.canGoForward, help: "Suivant (Cmd ])") { tab.goForward() }
+            navButton("chevron.right", enabled: tab.canGoForward, help: L("Suivant (Cmd ])")) { tab.goForward() }
                 .contextMenu { historyMenu(entries: tab.forwardEntries()) }
-            navButton("chevron.up", enabled: tab.canGoUp, help: "Dossier parent (Cmd Haut)") { tab.goUp() }
-            navButton("arrow.clockwise", enabled: true, help: "Actualiser (Cmd R)") { tab.reload() }
+            navButton("chevron.up", enabled: tab.canGoUp, help: L("Dossier parent (Cmd Haut)")) { tab.goUp() }
+            navButton("arrow.clockwise", enabled: true, help: L("Actualiser (Cmd R)")) { tab.reload() }
 
             addressField
 
@@ -73,7 +75,7 @@ struct AddressBarView: View {
     private var addressField: some View {
         ZStack {
             if model.isAddressBarEditing {
-                TextField("Chemin", text: $editedPath)
+                TextField(L("Chemin"), text: $editedPath)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .focused($pathFieldFocused)
@@ -118,14 +120,14 @@ struct AddressBarView: View {
                             // il ne doit donc jamais lire le disque ici.
                             if let children = subfolders.children(of: segment.url) {
                                 if children.isEmpty {
-                                    Text("Aucun sous-dossier")
+                                    Text(L("Aucun sous-dossier"))
                                 } else {
                                     ForEach(children, id: \.self) { child in
                                         Button(child.lastPathComponent) { tab.open(child) }
                                     }
                                 }
                             } else {
-                                Text("Chargement...")
+                                Text(L("Chargement..."))
                             }
                         } label: {
                             Image(systemName: "chevron.right")
@@ -148,7 +150,7 @@ struct AddressBarView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { model.isAddressBarEditing = true }
-        .help("Cliquer pour saisir un chemin (Cmd L)")
+        .help(L("Cliquer pour saisir un chemin (Cmd L)"))
     }
 
     private func commitPath() {
@@ -203,9 +205,9 @@ struct AddressBarView: View {
     }
 
     private var searchPlaceholder: String {
-        guard let url = tab.location.folderURL else { return "Rechercher" }
+        guard let url = tab.location.folderURL else { return L("Rechercher") }
         let name = names.name(for: url)
-        return name.isEmpty ? "Rechercher" : "Rechercher dans \(name)"
+        return name.isEmpty ? L("Rechercher") : L("Rechercher dans %@", name)
     }
 }
 

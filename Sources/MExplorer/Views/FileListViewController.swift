@@ -79,6 +79,14 @@ final class FileListViewController: NSViewController, FileAreaController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(columnDidResize(_:)),
             name: NSTableView.columnDidResizeNotification, object: tableView)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(languageDidChange),
+            name: L10n.changed, object: nil)
+    }
+
+    @objc private func languageDidChange() {
+        refreshColumnTitles()
+        tableView.reloadData()
     }
 
     deinit { NotificationCenter.default.removeObserver(self) }
@@ -152,6 +160,17 @@ final class FileListViewController: NSViewController, FileAreaController {
     func focus() { view.window?.makeFirstResponder(tableView) }
 
     // MARK: - Colonnes
+
+    /// Reecrit les en-tetes sans toucher aux colonnes : un changement de langue
+    /// ne modifie pas la composition, donc `rebuildColumns` ne ferait rien.
+    func refreshColumnTitles() {
+        for column in tableView.tableColumns {
+            if let id = ColumnID(rawValue: column.identifier.rawValue) {
+                column.title = id.title
+            }
+        }
+        tableView.headerView?.needsDisplay = true
+    }
 
     func rebuildColumns() {
         guard let tab else { return }

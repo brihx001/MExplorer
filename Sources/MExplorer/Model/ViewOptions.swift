@@ -5,15 +5,15 @@ enum ColumnID: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .name: return "Nom"
-        case .dateModified: return "Modifie le"
-        case .kind: return "Type"
-        case .size: return "Taille"
-        case .dateCreated: return "Cree le"
-        case .dateAdded: return "Ajoute le"
-        case .tags: return "Tags"
-        case .fileExtension: return "Extension"
-        case .path: return "Chemin"
+        case .name: return L("Nom")
+        case .dateModified: return L("Modifie le")
+        case .kind: return L("Type")
+        case .size: return L("Taille")
+        case .dateCreated: return L("Cree le")
+        case .dateAdded: return L("Ajoute le")
+        case .tags: return L("Tags")
+        case .fileExtension: return L("Extension")
+        case .path: return L("Chemin")
         }
     }
 
@@ -81,12 +81,12 @@ enum GroupKey: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .none: return "(Aucun)"
-        case .name: return "Nom"
-        case .kind: return "Type"
-        case .size: return "Taille"
-        case .dateModified: return "Modifie le"
-        case .tags: return "Tags"
+        case .none: return L("(Aucun)")
+        case .name: return L("Nom")
+        case .kind: return L("Type")
+        case .size: return L("Taille")
+        case .dateModified: return L("Modifie le")
+        case .tags: return L("Tags")
         }
     }
 }
@@ -96,14 +96,14 @@ enum ViewMode: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .extraLargeIcons: return "Tres grandes icones"
-        case .largeIcons: return "Grandes icones"
-        case .mediumIcons: return "Icones moyennes"
-        case .smallIcons: return "Petites icones"
-        case .list: return "Liste"
-        case .details: return "Details"
-        case .tiles: return "Mosaiques"
-        case .content: return "Contenu"
+        case .extraLargeIcons: return L("Tres grandes icones")
+        case .largeIcons: return L("Grandes icones")
+        case .mediumIcons: return L("Icones moyennes")
+        case .smallIcons: return L("Petites icones")
+        case .list: return L("Liste")
+        case .details: return L("Details")
+        case .tiles: return L("Mosaiques")
+        case .content: return L("Contenu")
         }
     }
 

@@ -5,6 +5,8 @@ import SwiftUI
 struct StatusBarView: View {
 
     @ObservedObject var model: WindowModel
+    /// Redessine la vue quand la langue (ou un reglage global) change.
+    @ObservedObject private var appSettings = AppSettings.shared
     @State private var selectionSize: Int64?
 
     private var tab: TabState { model.activeTab }
@@ -19,7 +21,7 @@ struct StatusBarView: View {
                 Text(total)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .help("Taille cumulee des elements affiches")
+                    .help(L("Taille cumulee des elements affiches"))
             }
 
             if model.hasSelection {
@@ -32,13 +34,13 @@ struct StatusBarView: View {
             if tab.isLoading {
                 Divider().frame(height: 12)
                 ProgressView().controlSize(.small).scaleEffect(0.6).frame(width: 14, height: 14)
-                Text("Chargement...").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("Chargement...")).font(.system(size: 11)).foregroundStyle(.secondary)
             }
 
             if tab.isMeasuringFolders {
                 Divider().frame(height: 12)
                 ProgressView().controlSize(.small).scaleEffect(0.6).frame(width: 14, height: 14)
-                Text("Calcul des tailles...").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("Calcul des tailles...")).font(.system(size: 11)).foregroundStyle(.secondary)
             }
 
             if FileOperations.shared.progress.isRunning {
@@ -60,7 +62,7 @@ struct StatusBarView: View {
                     .foregroundStyle(tab.settings.viewMode == .details ? Color.accentColor : Color.secondary)
             }
             .buttonStyle(.plain)
-            .help("Details")
+            .help(L("Details"))
 
             Button {
                 tab.update { $0.viewMode = .largeIcons }
@@ -69,7 +71,7 @@ struct StatusBarView: View {
                     .foregroundStyle(tab.settings.viewMode.isIconGrid ? Color.accentColor : Color.secondary)
             }
             .buttonStyle(.plain)
-            .help("Grandes icones")
+            .help(L("Grandes icones"))
         }
         .padding(.horizontal, 10)
         .frame(height: 24)
@@ -83,9 +85,9 @@ struct StatusBarView: View {
     private var itemCountText: String {
         let count = tab.rows.compactMap { $0.item }.count
         if !tab.filterText.isEmpty {
-            return "\(count) element(s) sur \(tab.items.count)"
+            return L("%d element(s) sur %d", count, tab.items.count)
         }
-        return count == 1 ? "1 element" : "\(count) elements"
+        return count == 1 ? L("1 element") : L("%d elements", count)
     }
 
     /// Poids cumule des elements affiches. Le point de suspension signale que
@@ -98,7 +100,7 @@ struct StatusBarView: View {
 
     private var selectionText: String {
         let count = model.selectionCount
-        let base = count == 1 ? "1 element selectionne" : "\(count) elements selectionnes"
+        let base = count == 1 ? L("1 element selectionne") : L("%d elements selectionnes", count)
         if let size = selectionSize, size > 0 { return "\(base)  -  \(Fmt.size(size))" }
         return base
     }
@@ -111,6 +113,8 @@ struct StatusBarView: View {
 
 /// Jauge de remplissage du volume courant, du vert au rouge.
 struct DiskGauge: View {
+
+    @ObservedObject private var appSettings = AppSettings.shared
 
     let usage: VolumeUsage
 
@@ -131,7 +135,7 @@ struct DiskGauge: View {
                     .frame(width: max(3, Self.width * usage.fraction), height: Self.height)
             }
 
-            Text("\(Fmt.size(usage.available)) libres")
+            Text(L("%@ libres", Fmt.size(usage.available)))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
@@ -147,6 +151,8 @@ struct DiskGauge: View {
 }
 
 struct OperationProgressView: View {
+
+    @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject var progress: FileOperationProgress
 
     var body: some View {
@@ -154,7 +160,7 @@ struct OperationProgressView: View {
             ProgressView(value: progress.fraction)
                 .frame(width: 90)
                 .controlSize(.small)
-            Text("\(progress.kind.rawValue) \(progress.completed)/\(progress.total)")
+            Text("\(progress.kind.title) \(progress.completed)/\(progress.total)")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }

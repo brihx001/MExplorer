@@ -26,7 +26,7 @@ enum OpenWith {
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.message = "Choisir l'application avec laquelle ouvrir la selection"
+        panel.message = L("Choisir l'application avec laquelle ouvrir la selection")
         guard panel.runModal() == .OK, let app = panel.url else { return }
         model.openWith(application: app)
     }

@@ -1,7 +1,7 @@
 import AppKit
 
 /// Ce qu'un onglet peut afficher. Un dossier dans la majorite des cas, mais aussi
-/// une recherche, un tag ou la page "Ce Mac" (equivalent de "Ce PC" de Windows).
+/// une recherche, un tag ou la page L("Ce Mac") (equivalent de "Ce PC" de Windows).
 enum Location: Hashable {
     case folder(URL)
     case search(text: String, scope: URL?)
@@ -19,12 +19,12 @@ enum Location: Hashable {
             if url.path == "/" { return "Macintosh HD" }
             return DisplayNameCache.shared.name(for: url)
         case .search(let text, let scope):
-            let base = text.isEmpty ? "Recherche" : "\"\(text)\""
-            if let scope { return "\(base) dans \(scope.lastPathComponent)" }
-            return "\(base) sur ce Mac"
+            let base = text.isEmpty ? L("Recherche") : "\"\(text)\""
+            if let scope { return L("%@ dans %@", base, scope.lastPathComponent) }
+            return L("%@ sur ce Mac", base)
         case .tag(let t): return t
-        case .recents: return "Recents"
-        case .thisMac: return "Ce Mac"
+        case .recents: return L("Recents")
+        case .thisMac: return L("Ce Mac")
         }
     }
 
@@ -43,10 +43,11 @@ enum Location: Hashable {
         switch self {
         case .folder(let url): return url.path
         case .search(let text, let scope):
-            return "Resultats de la recherche pour \"\(text)\"" + (scope.map { " dans \($0.lastPathComponent)" } ?? "")
-        case .tag(let t): return "Tag : \(t)"
-        case .recents: return "Recents"
-        case .thisMac: return "Ce Mac"
+            let base = L("Resultats de la recherche pour \"%@\"", text)
+            return base + (scope.map { L(" dans %@", $0.lastPathComponent) } ?? "")
+        case .tag(let t): return L("Tag : %@", t)
+        case .recents: return L("Recents")
+        case .thisMac: return L("Ce Mac")
         }
     }
 }

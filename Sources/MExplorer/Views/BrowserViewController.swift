@@ -311,7 +311,7 @@ struct FileAreaOverlay: View {
                     .multilineTextAlignment(.center)
             }
             if case .accessDenied(let url) = state {
-                Button("Autoriser l'acces a ce dossier") {
+                Button(L("Autoriser l'acces a ce dossier")) {
                     model.requestAccess(for: url)
                 }
                 .controlSize(.large)
@@ -331,19 +331,19 @@ struct FileAreaOverlay: View {
 
     private var title: String {
         switch state {
-        case .empty: return "Ce dossier est vide"
-        case .noMatch: return "Aucun element ne correspond"
-        case .accessDenied: return "Acces non autorise"
-        case .error: return "Impossible de lire ce dossier"
+        case .empty: return L("Ce dossier est vide")
+        case .noMatch: return L("Aucun element ne correspond")
+        case .accessDenied: return L("Acces non autorise")
+        case .error: return L("Impossible de lire ce dossier")
         }
     }
 
     private var detail: String? {
         switch state {
         case .empty: return nil
-        case .noMatch: return "Modifiez le filtre ou appuyez sur Entree pour lancer une recherche Spotlight."
+        case .noMatch: return L("Modifiez le filtre ou appuyez sur Entree pour lancer une recherche Spotlight.")
         case .accessDenied(let url):
-            return "MExplorer fonctionne dans le bac a sable macOS.\nAutorisez \"\(url.lastPathComponent)\" pour afficher son contenu."
+            return L("MExplorer fonctionne dans le bac a sable macOS.\nAutorisez \"%@\" pour afficher son contenu.", url.lastPathComponent)
         case .error(let error): return (error as NSError).localizedDescription
         }
     }

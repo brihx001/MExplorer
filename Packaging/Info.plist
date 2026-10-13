@@ -4,6 +4,15 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>fr</string>
+    <!-- Sans cette liste, macOS considere l'application comme non localisee et
+         fournit ses propres libelles (type d'un fichier, panneaux systeme)
+         dans la region de developpement, ici le francais, meme sur un Mac en
+         anglais. -->
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>fr</string>
+        <string>en</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>MExplorer</string>
     <key>CFBundleIconFile</key>

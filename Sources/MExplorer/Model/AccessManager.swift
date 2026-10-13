@@ -94,7 +94,7 @@ final class AccessManager {
     func requestWholeDisk(window: NSWindow? = nil) -> URL? {
         requestAccess(
             to: URL(fileURLWithPath: "/"),
-            message: "Choisissez le disque de demarrage pour autoriser MExplorer a le lire en entier.",
+            message: L("Choisissez le disque de demarrage pour autoriser MExplorer a le lire en entier."),
             window: window
         )
     }
@@ -109,8 +109,8 @@ final class AccessManager {
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
         panel.message = message
-        panel.prompt = "Autoriser"
-        panel.title = "Autoriser l'acces"
+        panel.prompt = L("Autoriser")
+        panel.title = L("Autoriser l'acces")
         if let suggested { panel.directoryURL = suggested }
 
         let response: NSApplication.ModalResponse

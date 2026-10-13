@@ -248,11 +248,11 @@ final class WindowModel: ObservableObject {
         let alert = NSAlert()
         alert.alertStyle = .critical
         alert.messageText = urls.count == 1
-            ? "Supprimer definitivement \"\(urls[0].lastPathComponent)\" ?"
-            : "Supprimer definitivement ces \(urls.count) elements ?"
-        alert.informativeText = "Cette action est irreversible. Les elements ne passeront pas par la corbeille."
-        alert.addButton(withTitle: "Supprimer")
-        alert.addButton(withTitle: "Annuler")
+            ? L("Supprimer definitivement \"%@\" ?", urls[0].lastPathComponent)
+            : L("Supprimer definitivement ces %d elements ?", urls.count)
+        alert.informativeText = L("Cette action est irreversible. Les elements ne passeront pas par la corbeille.")
+        alert.addButton(withTitle: L("Supprimer"))
+        alert.addButton(withTitle: L("Annuler"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
             FileOperations.shared.deletePermanently(urls) { error in
@@ -370,10 +370,10 @@ final class WindowModel: ObservableObject {
 
     func promptForNewTag() {
         let alert = NSAlert()
-        alert.messageText = "Nouveau tag"
-        alert.informativeText = "Nom du tag a appliquer a la selection."
-        alert.addButton(withTitle: "Appliquer")
-        alert.addButton(withTitle: "Annuler")
+        alert.messageText = L("Nouveau tag")
+        alert.informativeText = L("Nom du tag a appliquer a la selection.")
+        alert.addButton(withTitle: L("Appliquer"))
+        alert.addButton(withTitle: L("Annuler"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
@@ -399,10 +399,10 @@ final class WindowModel: ObservableObject {
         guard let window else { return }
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Vider la corbeille ?"
-        alert.informativeText = "Les elements seront supprimes definitivement."
-        alert.addButton(withTitle: "Vider")
-        alert.addButton(withTitle: "Annuler")
+        alert.messageText = L("Vider la corbeille ?")
+        alert.informativeText = L("Les elements seront supprimes definitivement.")
+        alert.addButton(withTitle: L("Vider"))
+        alert.addButton(withTitle: L("Annuler"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
             FileOperations.shared.emptyTrash { error in
@@ -422,7 +422,7 @@ final class WindowModel: ObservableObject {
     func requestAccess(for url: URL) {
         let granted = AccessManager.shared.requestAccess(
             to: url,
-            message: "MExplorer fonctionne dans le bac a sable macOS. Selectionnez \"\(url.lastPathComponent)\" (ou un dossier parent) pour autoriser son affichage.",
+            message: L("MExplorer fonctionne dans le bac a sable macOS. Selectionnez \"%@\" (ou un dossier parent) pour autoriser son affichage.", url.lastPathComponent),
             window: window
         )
         if granted != nil { activeTab.reload() }

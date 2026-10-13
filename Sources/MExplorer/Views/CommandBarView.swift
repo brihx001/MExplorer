@@ -4,6 +4,8 @@ import SwiftUI
 struct CommandBarView: View {
 
     @ObservedObject var model: WindowModel
+    /// Redessine la vue quand la langue (ou un reglage global) change.
+    @ObservedObject private var appSettings = AppSettings.shared
 
     private var tab: TabState { model.activeTab }
     private var hasSelection: Bool { model.hasSelection }
@@ -14,17 +16,17 @@ struct CommandBarView: View {
             newMenu
             divider
 
-            iconButton("scissors", "Couper", "Cmd X", enabled: hasSelection) { model.cutSelection() }
-            iconButton("doc.on.doc", "Copier", "Cmd C", enabled: hasSelection) { model.copySelection() }
-            iconButton("doc.on.clipboard", "Coller", "Cmd V",
+            iconButton("scissors", L("Couper"), L("Cmd X"), enabled: hasSelection) { model.cutSelection() }
+            iconButton("doc.on.doc", L("Copier"), L("Cmd C"), enabled: hasSelection) { model.copySelection() }
+            iconButton("doc.on.clipboard", L("Coller"), L("Cmd V"),
                        enabled: inFolder && FileClipboard.shared.canPaste) { model.paste() }
-            iconButton("pencil", "Renommer", "Entree", enabled: model.selectionCount == 1) {
+            iconButton("pencil", L("Renommer"), L("Entree"), enabled: model.selectionCount == 1) {
                 model.beginRenameSelection()
             }
-            iconButton("square.and.arrow.up", "Partager", nil, enabled: hasSelection) {
+            iconButton("square.and.arrow.up", L("Partager"), nil, enabled: hasSelection) {
                 model.shareSelection()
             }
-            iconButton("trash", "Placer dans la corbeille", "Cmd Suppr", enabled: hasSelection) {
+            iconButton("trash", L("Placer dans la corbeille"), L("Cmd Suppr"), enabled: hasSelection) {
                 model.trashSelection()
             }
 
@@ -39,13 +41,13 @@ struct CommandBarView: View {
                 Image(systemName: "sidebar.squares.right")
             }
             .toggleStyle(.button)
-            .help("Volet d'apercu")
+            .help(L("Volet d'apercu"))
 
             Toggle(isOn: $model.showDetailsPane) {
                 Image(systemName: "info.circle")
             }
             .toggleStyle(.button)
-            .help("Volet de details")
+            .help(L("Volet de details"))
         }
         .padding(.horizontal, 10)
         .frame(height: 40)
@@ -74,16 +76,16 @@ struct CommandBarView: View {
 
     private var newMenu: some View {
         Menu {
-            Button("Dossier") { model.newFolder() }
+            Button(L("Dossier")) { model.newFolder() }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             Divider()
-            Button("Document texte") { model.newFile(named: "Nouveau document.txt") }
-            Button("Document RTF") { model.newFile(named: "Nouveau document.rtf") }
+            Button(L("Document texte")) { model.newFile(named: "Nouveau document.txt") }
+            Button(L("Document RTF")) { model.newFile(named: "Nouveau document.rtf") }
             Divider()
-            Button("Coller un raccourci") { model.pasteShortcut() }
+            Button(L("Coller un raccourci")) { model.pasteShortcut() }
                 .disabled(!FileClipboard.shared.canPaste)
         } label: {
-            Label("Nouveau", systemImage: "plus")
+            Label(L("Nouveau"), systemImage: "plus")
                 .font(.system(size: 12))
         }
         .menuStyle(.borderlessButton)
@@ -105,10 +107,10 @@ struct CommandBarView: View {
                 }
             }
             Divider()
-            Button("Croissant") { tab.update { $0.ascending = true } }
-            Button("Decroissant") { tab.update { $0.ascending = false } }
+            Button(L("Croissant")) { tab.update { $0.ascending = true } }
+            Button(L("Decroissant")) { tab.update { $0.ascending = false } }
             Divider()
-            Menu("Grouper par") {
+            Menu(L("Grouper par")) {
                 ForEach(GroupKey.allCases, id: \.self) { key in
                     Button {
                         tab.update { $0.groupKey = key }
@@ -119,12 +121,12 @@ struct CommandBarView: View {
                 }
             }
             Divider()
-            Toggle("Dossiers en premier", isOn: Binding(
+            Toggle(L("Dossiers en premier"), isOn: Binding(
                 get: { tab.settings.foldersFirst },
                 set: { v in tab.update { $0.foldersFirst = v } }
             ))
         } label: {
-            Label("Trier", systemImage: "arrow.up.arrow.down")
+            Label(L("Trier"), systemImage: "arrow.up.arrow.down")
                 .font(.system(size: 12))
         }
         .menuStyle(.borderlessButton)
@@ -142,27 +144,27 @@ struct CommandBarView: View {
                 }
             }
             Divider()
-            Menu("Afficher") {
-                Toggle("Volet de navigation", isOn: $model.showSidebar)
-                Toggle("Volet de details", isOn: $model.showDetailsPane)
-                Toggle("Volet d'apercu", isOn: $model.showPreviewPane)
+            Menu(L("Afficher")) {
+                Toggle(L("Volet de navigation"), isOn: $model.showSidebar)
+                Toggle(L("Volet de details"), isOn: $model.showDetailsPane)
+                Toggle(L("Volet d'apercu"), isOn: $model.showPreviewPane)
                 Divider()
-                Toggle("Extensions de noms de fichiers", isOn: Binding(
+                Toggle(L("Extensions de noms de fichiers"), isOn: Binding(
                     get: { AppSettings.shared.showFileExtensions },
                     set: { AppSettings.shared.showFileExtensions = $0; tab.rebuildRows() }
                 ))
-                Toggle("Calculer la taille des dossiers", isOn: Binding(
+                Toggle(L("Calculer la taille des dossiers"), isOn: Binding(
                     get: { tab.settings.calculateFolderSizes },
                     set: { v in tab.update { $0.calculateFolderSizes = v } }
                 ))
             }
             Divider()
-            Toggle("Elements masques", isOn: Binding(
+            Toggle(L("Elements masques"), isOn: Binding(
                 get: { AppSettings.shared.showHiddenItems },
                 set: { AppSettings.shared.showHiddenItems = $0 }
             ))
             Divider()
-            Menu("Colonnes") {
+            Menu(L("Colonnes")) {
                 ForEach(ColumnID.allCases, id: \.self) { column in
                     Toggle(column.title, isOn: Binding(
                         get: { tab.settings.visibleColumns.contains(column) },
@@ -179,11 +181,11 @@ struct CommandBarView: View {
                 }
             }
             Divider()
-            Button("Appliquer ces reglages a tous les dossiers") {
+            Button(L("Appliquer ces reglages a tous les dossiers")) {
                 FolderSettingsStore.shared.applyToAllFolders(tab.settings)
             }
         } label: {
-            Label("Afficher", systemImage: tab.settings.viewMode.symbol)
+            Label(L("Afficher"), systemImage: tab.settings.viewMode.symbol)
                 .font(.system(size: 12))
         }
         .menuStyle(.borderlessButton)
@@ -192,33 +194,33 @@ struct CommandBarView: View {
 
     private var moreMenu: some View {
         Menu {
-            Button("Ouvrir dans un nouvel onglet") {
+            Button(L("Ouvrir dans un nouvel onglet")) {
                 if let url = model.selection.first(where: { $0.isNavigableContainer })?.url {
                     model.openInNewTab(url)
                 }
             }.disabled(!model.selection.contains { $0.isNavigableContainer })
-            Button("Ouvrir dans une nouvelle fenetre") {
+            Button(L("Ouvrir dans une nouvelle fenetre")) {
                 if let url = model.selection.first(where: { $0.isNavigableContainer })?.url {
                     model.openInNewWindow(url)
                 }
             }.disabled(!model.selection.contains { $0.isNavigableContainer })
             Divider()
-            Button("Dupliquer") { model.duplicateSelection() }.disabled(!hasSelection)
-            Button("Creer un alias") { model.makeAliasForSelection() }.disabled(!hasSelection)
-            Button("Compresser") { model.compressSelection() }.disabled(!hasSelection)
+            Button(L("Dupliquer")) { model.duplicateSelection() }.disabled(!hasSelection)
+            Button(L("Creer un alias")) { model.makeAliasForSelection() }.disabled(!hasSelection)
+            Button(L("Compresser")) { model.compressSelection() }.disabled(!hasSelection)
             Divider()
-            Button("Copier le chemin d'acces") { model.copySelectionPaths() }.disabled(!hasSelection)
-            Button("Afficher dans le Finder") { model.revealInFinder() }
+            Button(L("Copier le chemin d'acces")) { model.copySelectionPaths() }.disabled(!hasSelection)
+            Button(L("Afficher dans le Finder")) { model.revealInFinder() }
             Divider()
-            Menu("Tags") {
+            Menu(L("Tags")) {
                 ForEach(TagManager.knownTags, id: \.self) { tag in
                     Button(tag) { model.toggleTag(tag) }
                 }
             }.disabled(!hasSelection)
             Divider()
-            Button("Supprimer definitivement") { model.deleteSelectionPermanently() }
+            Button(L("Supprimer definitivement")) { model.deleteSelectionPermanently() }
                 .disabled(!hasSelection)
-            Button("Proprietes") { model.showInfoWindow() }.disabled(!hasSelection)
+            Button(L("Proprietes")) { model.showInfoWindow() }.disabled(!hasSelection)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 12))

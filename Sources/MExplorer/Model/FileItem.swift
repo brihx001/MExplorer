@@ -81,7 +81,7 @@ final class FileItem: NSObject {
         self.addedDate = v?.addedToDirectoryDate
         self.contentType = v?.contentType
         self.kindDescription = v?.localizedTypeDescription
-            ?? (v?.isDirectory == true ? "Dossier" : "Document")
+            ?? (v?.isDirectory == true ? L("Dossier") : L("Document"))
         self.labelNumber = v?.labelNumber ?? 0
         self.tagNames = v?.tagNames ?? []
         self.isUbiquitous = v?.isUbiquitousItem ?? false

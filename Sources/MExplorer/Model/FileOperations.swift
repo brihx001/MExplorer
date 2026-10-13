@@ -41,10 +41,10 @@ final class FileOperations {
     // MARK: - Creation
 
     @discardableResult
-    func newFolder(in parent: URL, name: String = "nouveau dossier", undoManager: UndoManager? = nil) throws -> URL {
+    func newFolder(in parent: URL, name: String = L("nouveau dossier"), undoManager: UndoManager? = nil) throws -> URL {
         let url = Self.uniqueURL(for: parent.appendingPathComponent(name))
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
-        registerUndoDelete(of: [url], undoManager: undoManager, actionName: "Nouveau dossier")
+        registerUndoDelete(of: [url], undoManager: undoManager, actionName: L("Nouveau dossier"))
         return url
     }
 
@@ -54,7 +54,7 @@ final class FileOperations {
         guard FileManager.default.createFile(atPath: url.path, contents: contents) else {
             throw CocoaError(.fileWriteUnknown)
         }
-        registerUndoDelete(of: [url], undoManager: undoManager, actionName: "Nouveau fichier")
+        registerUndoDelete(of: [url], undoManager: undoManager, actionName: L("Nouveau fichier"))
         return url
     }
 
@@ -67,7 +67,7 @@ final class FileOperations {
         let destination = url.deletingLastPathComponent().appendingPathComponent(trimmed)
         if FileManager.default.fileExists(atPath: destination.path) {
             throw NSError(domain: "MExplorer", code: 17, userInfo: [
-                NSLocalizedDescriptionKey: "Un element nomme \"\(trimmed)\" existe deja a cet emplacement."
+                NSLocalizedDescriptionKey: L("Un element nomme \"%@\" existe deja a cet emplacement.", trimmed)
             ])
         }
         try FileManager.default.moveItem(at: url, to: destination)
@@ -77,7 +77,7 @@ final class FileOperations {
         undoManager?.registerUndo(withTarget: self) { target in
             _ = try? target.rename(destination, to: oldName, undoManager: undoManager)
         }
-        undoManager?.setActionName("Renommer")
+        undoManager?.setActionName(L("Renommer"))
         return destination
     }
 
@@ -94,8 +94,8 @@ final class FileOperations {
                         }
                         target.notifyChange()
                     }
-                    undoManager?.setActionName(urls.count == 1 ? "Placer dans la corbeille"
-                                                              : "Placer \(urls.count) elements dans la corbeille")
+                    undoManager?.setActionName(urls.count == 1 ? L("Placer dans la corbeille")
+                                                              : L("Placer %d elements dans la corbeille", urls.count))
                 }
                 self?.notifyChange()
                 completion?(newURLs, error)
@@ -199,7 +199,7 @@ final class FileOperations {
                         target.notifyChange()
                     }
                 }
-                undoManager?.setActionName(kind == .copy ? "Copier" : "Deplacer")
+                undoManager?.setActionName(kind == .copy ? L("Copier") : L("Deplacer"))
             }
             self.notifyChange()
             completion?(created, error)
@@ -231,7 +231,7 @@ final class FileOperations {
             let created = self.lastCreated
             if error == nil, !created.isEmpty {
                 undoManager?.registerUndo(withTarget: self) { target in target.deletePermanently(created) }
-                undoManager?.setActionName("Dupliquer")
+                undoManager?.setActionName(L("Dupliquer"))
             }
             self.notifyChange()
             completion?(created, error)
@@ -253,7 +253,7 @@ final class FileOperations {
                 created.append(target)
             } catch { continue }
         }
-        registerUndoDelete(of: created, undoManager: undoManager, actionName: "Creer un alias")
+        registerUndoDelete(of: created, undoManager: undoManager, actionName: L("Creer un alias"))
         notifyChange()
         return created
     }
@@ -264,7 +264,7 @@ final class FileOperations {
         guard !urls.isEmpty else { completion(nil, nil); return }
 
         run(kind: .compress, count: 1) { report in
-            report(0, urls.count == 1 ? urls[0].lastPathComponent : "Archive")
+            report(0, urls.count == 1 ? urls[0].lastPathComponent : L("Archive"))
             do {
                 let sourceForZip: URL
                 let temp = FileManager.default.temporaryDirectory
@@ -274,7 +274,7 @@ final class FileOperations {
                     sourceForZip = urls[0]
                 } else {
                     try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
-                    let staging = temp.appendingPathComponent("Archive", isDirectory: true)
+                    let staging = temp.appendingPathComponent(L("Archive"), isDirectory: true)
                     try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
                     for u in urls {
                         try FileManager.default.copyItem(at: u, to: staging.appendingPathComponent(u.lastPathComponent))
@@ -286,7 +286,7 @@ final class FileOperations {
                 var thrown: Error?
                 let baseName = urls.count == 1
                     ? urls[0].deletingPathExtension().lastPathComponent
-                    : "Archive"
+                    : L("Archive")
                 let target = Self.uniqueURL(for: destination.appendingPathComponent(baseName + ".zip"))
 
                 NSFileCoordinator().coordinate(readingItemAt: sourceForZip,
@@ -346,7 +346,19 @@ final class FileOperations {
 
 /// Etat de progression observable des operations longues.
 final class FileOperationProgress: ObservableObject {
-    enum Kind: String { case copy = "Copie", move = "Deplacement", delete = "Suppression", compress = "Compression" }
+    enum Kind: String {
+        case copy, move, delete, compress
+
+        /// Libelle affiche dans la barre d'etat.
+        var title: String {
+            switch self {
+            case .copy: return L("Copie")
+            case .move: return L("Deplacement")
+            case .delete: return L("Suppression")
+            case .compress: return L("Compression")
+            }
+        }
+    }
 
     @Published private(set) var isRunning = false
     @Published private(set) var kind: Kind = .copy

@@ -20,7 +20,7 @@ final class PreferencesWindowController: NSWindowController {
     private init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Reglages"
+        window.title = L("Reglages")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: PreferencesView())
         window.center()
@@ -37,8 +37,8 @@ private struct PreferencesView: View {
 
     var body: some View {
         TabView {
-            general.tabItem { Label("General", systemImage: "gear") }
-            access.tabItem { Label("Acces", systemImage: "lock.open") }
+            general.tabItem { Label(L("General"), systemImage: "gear") }
+            access.tabItem { Label(L("Acces"), systemImage: "lock.open") }
         }
         .padding(14)
         .frame(width: 480, height: 400)
@@ -46,12 +46,23 @@ private struct PreferencesView: View {
 
     private var general: some View {
         Form {
-            Toggle("Afficher les extensions de noms de fichiers", isOn: $settings.showFileExtensions)
-            Toggle("Ouvrir d'un seul clic", isOn: $settings.singleClickToOpen)
-            Toggle("Ouvrir les dossiers dans un nouvel onglet", isOn: $settings.openFoldersInNewTab)
-            Toggle("Confirmer les suppressions definitives", isOn: $settings.confirmPermanentDelete)
+            Picker(L("Langue"), selection: $settings.language) {
+                ForEach(AppLanguage.allCases) { language in
+                    Text(language.title).tag(language)
+                }
+            }
+            Text(L("Un changement de langue s'applique immediatement aux menus et aux panneaux ; quelques libelles deja affiches suivent au prochain lancement."))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Divider()
-            Button("Reinitialiser les reglages d'affichage des dossiers") {
+            Toggle(L("Afficher les elements masques"), isOn: $settings.showHiddenItems)
+            Toggle(L("Afficher les extensions de noms de fichiers"), isOn: $settings.showFileExtensions)
+            Toggle(L("Ouvrir d'un seul clic"), isOn: $settings.singleClickToOpen)
+            Toggle(L("Ouvrir les dossiers dans un nouvel onglet"), isOn: $settings.openFoldersInNewTab)
+            Toggle(L("Confirmer les suppressions definitives"), isOn: $settings.confirmPermanentDelete)
+            Divider()
+            Button(L("Reinitialiser les reglages d'affichage des dossiers")) {
                 FolderSettingsStore.shared.applyToAllFolders(.default)
             }
         }
@@ -60,9 +71,9 @@ private struct PreferencesView: View {
 
     private var access: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Dossiers autorises")
+            Text(L("Dossiers autorises"))
                 .font(.system(size: 12, weight: .semibold))
-            Text("MExplorer est sandboxe : seuls les dossiers listes ici (et leurs sous-dossiers) sont accessibles entre deux lancements.")
+            Text(L("MExplorer est sandboxe : seuls les dossiers listes ici (et leurs sous-dossiers) sont accessibles entre deux lancements."))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
@@ -72,7 +83,7 @@ private struct PreferencesView: View {
                         Image(systemName: "folder")
                         Text(url.path).font(.system(size: 11)).lineLimit(1).truncationMode(.head)
                         Spacer()
-                        Button("Retirer") {
+                        Button(L("Retirer")) {
                             AccessManager.shared.revoke(url)
                             roots = AccessManager.shared.grantedRoots
                         }
@@ -83,10 +94,10 @@ private struct PreferencesView: View {
             .frame(minHeight: 180)
 
             HStack {
-                Button("Ajouter un dossier...") {
+                Button(L("Ajouter un dossier...")) {
                     if AccessManager.shared.requestAccess(
                         to: SidebarCatalog.home,
-                        message: "Choisissez un dossier a autoriser durablement.",
+                        message: L("Choisissez un dossier a autoriser durablement."),
                         window: NSApp.keyWindow) != nil {
                         roots = AccessManager.shared.grantedRoots
                     }

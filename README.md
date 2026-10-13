@@ -106,6 +106,10 @@ pour cela.
   dans l'application ou ailleurs, apparait dans l'arborescence sans rien
   replier. Les volumes amovibles portent un bouton d'ejection. Le disque de
   demarrage n'est liste qu'une fois, sous « Ce Mac ».
+- **Reglages** : langue de l'interface, affichage des elements masques, des
+  extensions de noms de fichiers, ouverture d'un seul clic, ouverture des
+  dossiers dans un nouvel onglet, confirmation des suppressions definitives,
+  reinitialisation des reglages d'affichage, et liste des dossiers autorises.
 - **Acces rapide** : une liste plate de raccourcis, sans chevron ni
   sous-arborescence (la hierarchie se deplie sous « Ce Mac »). Un dossier
   lache sur l'en-tete, ou entre deux favoris, devient un favori a la position
@@ -259,6 +263,27 @@ Deux pieges Quick Look valent d'etre notes :
 - `QLThumbnailGenerator` abandonne silencieusement les requetes au-dela de
   quelques demandes simultanees : elles sont mises en file, quatre a la fois,
   avec un chien de garde.
+
+## Langues
+
+L'interface suit la langue du Mac au premier lancement, et se change dans
+**Reglages > General > Langue** : *Langue du systeme*, *Francais* ou
+*English*. Le changement s'applique immediatement, sans redemarrer.
+
+Les libelles sont ecrits en francais dans le code et le francais sert de cle :
+`Support/EnglishStrings.swift` fournit la table anglaise, et une cle absente
+retombe sur le francais. Ajouter une langue tient donc en un fichier de meme
+forme, une entree dans `AppLanguage` et une ligne dans `L10n.apply`.
+
+Deux details valent d'etre connus :
+
+- `Packaging/Info.plist` declare `CFBundleLocalizations` (`fr`, `en`). Sans
+  cette liste, macOS considere l'application comme non localisee et fournit
+  ses propres libelles (type d'un fichier, panneaux systeme) dans la region de
+  developpement, donc en francais meme sur un Mac en anglais.
+- Ces libelles-la suivent la langue du **systeme**, pas le reglage de
+  l'application : choisir le francais sur un Mac en anglais laisse la colonne
+  Type en anglais. Les dates, elles, suivent bien le reglage.
 
 ## Icone
 

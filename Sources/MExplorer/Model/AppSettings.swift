@@ -101,14 +101,29 @@ final class AppSettings: ObservableObject {
     /// reglage par dossier donne l'impression que l'option ne tient pas.
     static let hiddenItemsChanged = Notification.Name("com.jerome.mexplorer.hiddenItemsChanged")
 
-    var showHiddenItems: Bool {
-        get { d.bool(forKey: "showHiddenItems") }
-        set {
-            guard newValue != showHiddenItems else { return }
-            d.set(newValue, forKey: "showHiddenItems")
+    @Published var showHiddenItems: Bool = AppSettings.flag("showHiddenItems", false) {
+        didSet {
+            guard showHiddenItems != oldValue else { return }
+            d.set(showHiddenItems, forKey: "showHiddenItems")
             NotificationCenter.default.post(name: Self.hiddenItemsChanged, object: nil)
         }
     }
 
     func toggleHiddenItems() { showHiddenItems.toggle() }
+
+    // MARK: - Langue
+
+    /// Langue de l'interface. `system` suit la langue du Mac.
+    @Published var language: AppLanguage = AppSettings.storedLanguage {
+        didSet {
+            guard language != oldValue else { return }
+            d.set(language.rawValue, forKey: "language")
+            L10n.apply(language)
+        }
+    }
+
+    private static var storedLanguage: AppLanguage {
+        UserDefaults.standard.string(forKey: "language")
+            .flatMap(AppLanguage.init(rawValue:)) ?? .system
+    }
 }

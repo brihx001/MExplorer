@@ -6,6 +6,8 @@ import Quartz
 struct DetailsPaneView: View {
 
     @ObservedObject var model: WindowModel
+    /// Redessine la vue quand la langue (ou un reglage global) change.
+    @ObservedObject private var appSettings = AppSettings.shared
     @State private var folderSize: Int64?
     @State private var folderSizeURL: URL?
 
@@ -47,11 +49,11 @@ struct DetailsPaneView: View {
         VStack(alignment: .leading, spacing: 8) {
             if let folder = model.currentFolder {
                 header(icon: IconCache.shared.icon(forFileAt: folder), title: folder.lastPathComponent,
-                       subtitle: "Dossier")
-                row("Chemin", folder.path)
-                row("Elements", "\(model.activeTab.items.count)")
+                       subtitle: L("Dossier"))
+                row(L("Chemin"), folder.path)
+                row(L("Elements"), "\(model.activeTab.items.count)")
             } else {
-                Text("Aucun element selectionne")
+                Text(L("Aucun element selectionne"))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -68,31 +70,31 @@ struct DetailsPaneView: View {
 
             if item.isNavigableContainer {
                 HStack {
-                    Text("Taille").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L("Taille")).font(.system(size: 11)).foregroundStyle(.secondary)
                         .frame(width: 92, alignment: .leading)
                     if let size = folderSize, folderSizeURL == item.url {
                         Text(Fmt.size(size)).font(.system(size: 11))
                     } else {
-                        Button("Calculer") { computeFolderSize(item) }
+                        Button(L("Calculer")) { computeFolderSize(item) }
                             .buttonStyle(.link)
                             .font(.system(size: 11))
                     }
                 }
             } else {
-                row("Taille", Fmt.size(item.byteSize))
+                row(L("Taille"), Fmt.size(item.byteSize))
             }
-            row("Modifie le", Fmt.date(item.modificationDate))
-            row("Cree le", Fmt.date(item.creationDate))
-            if let added = item.addedDate { row("Ajoute le", Fmt.date(added)) }
-            row("Emplacement", item.url.deletingLastPathComponent().path)
-            if !item.fileExtension.isEmpty { row("Extension", item.fileExtension) }
-            row("Autorisations", item.isWritable ? "Lecture et ecriture" : "Lecture seule")
+            row(L("Modifie le"), Fmt.date(item.modificationDate))
+            row(L("Cree le"), Fmt.date(item.creationDate))
+            if let added = item.addedDate { row(L("Ajoute le"), Fmt.date(added)) }
+            row(L("Emplacement"), item.url.deletingLastPathComponent().path)
+            if !item.fileExtension.isEmpty { row(L("Extension"), item.fileExtension) }
+            row(L("Autorisations"), item.isWritable ? L("Lecture et ecriture") : L("Lecture seule"))
             if item.isUbiquitous { row("iCloud", ubiquitousLabel(item)) }
 
             if !item.tagNames.isEmpty {
                 Divider()
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Tags").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L("Tags")).font(.system(size: 11)).foregroundStyle(.secondary)
                     HStack(spacing: 5) {
                         ForEach(item.tagNames, id: \.self) { tag in
                             HStack(spacing: 3) {
@@ -111,8 +113,8 @@ struct DetailsPaneView: View {
 
             Divider()
             HStack(spacing: 8) {
-                Button("Ouvrir") { model.activate([item]) }
-                Button("Proprietes") { model.showInfoWindow() }
+                Button(L("Ouvrir")) { model.activate([item]) }
+                Button(L("Proprietes")) { model.showInfoWindow() }
             }
             .controlSize(.small)
         }
@@ -123,11 +125,11 @@ struct DetailsPaneView: View {
         let folders = selection.count - files.count
         let total = files.reduce(Int64(0)) { $0 + $1.byteSize }
         return VStack(alignment: .leading, spacing: 8) {
-            Text("\(selection.count) elements selectionnes")
+            Text(L("%d elements selectionnes", selection.count))
                 .font(.system(size: 13, weight: .semibold))
-            row("Fichiers", "\(files.count)")
-            row("Dossiers", "\(folders)")
-            row("Taille totale", Fmt.size(total))
+            row(L("Fichiers"), "\(files.count)")
+            row(L("Dossiers"), "\(folders)")
+            row(L("Taille totale"), Fmt.size(total))
         }
     }
 
@@ -164,9 +166,9 @@ struct DetailsPaneView: View {
 
     private func ubiquitousLabel(_ item: FileItem) -> String {
         switch item.ubiquitousStatus {
-        case .some(.current): return "Telecharge"
-        case .some(.downloaded): return "Telecharge"
-        case .some(.notDownloaded): return "Non telecharge"
+        case .some(.current): return L("Telecharge")
+        case .some(.downloaded): return L("Telecharge")
+        case .some(.notDownloaded): return L("Non telecharge")
         default: return "iCloud"
         }
     }

@@ -87,6 +87,9 @@ final class SidebarViewController: NSViewController {
         observers.append(center.addObserver(forName: AppSettings.favoritesChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuild()
         })
+        observers.append(center.addObserver(forName: L10n.changed, object: nil, queue: .main) { [weak self] _ in
+            self?.rebuild()
+        })
         // Les surveillants couvrent deja les dossiers deplies, mais une creation
         // faite depuis l'application doit se voir sans attendre l'anti-rebond.
         observers.append(center.addObserver(forName: FileOperations.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -193,7 +196,7 @@ final class SidebarViewController: NSViewController {
         var result: [SidebarNode] = []
 
         // Acces rapide
-        let quick = SidebarNode(kind: .header, title: "Acces rapide", symbol: "star")
+        let quick = SidebarNode(kind: .header, title: L("Acces rapide"), symbol: "star")
         quick.isQuickAccess = true
         quick.children = AppSettings.shared.favoritePaths
             .map { URL(fileURLWithPath: $0) }
@@ -208,20 +211,20 @@ final class SidebarViewController: NSViewController {
         // iCloud
         if let icloud = SidebarCatalog.iCloudDrive {
             let header = SidebarNode(kind: .header, title: "iCloud", symbol: "icloud")
-            let node = SidebarNode(folderAt: icloud, title: "iCloud Drive")
+            let node = SidebarNode(folderAt: icloud, title: L("iCloud Drive"))
             node.parent = header
             header.children = [node]
             result.append(header)
         }
 
         // Ce Mac : arborescence reelle a partir du dossier personnel
-        let thisMac = SidebarNode(kind: .header, title: "Ce Mac", symbol: "desktopcomputer")
+        let thisMac = SidebarNode(kind: .header, title: L("Ce Mac"), symbol: "desktopcomputer")
         thisMac.isRealTree = true
         var macChildren: [SidebarNode] = []
         let homeNode = SidebarNode(folderAt: SidebarCatalog.home)
         homeNode.parent = thisMac
         macChildren.append(homeNode)
-        let appsNode = SidebarNode(folderAt: SidebarCatalog.applications, title: "Applications")
+        let appsNode = SidebarNode(folderAt: SidebarCatalog.applications, title: L("Applications"))
         appsNode.parent = thisMac
         macChildren.append(appsNode)
         let rootNode = SidebarNode(folderAt: URL(fileURLWithPath: "/"), title: "Macintosh HD")
@@ -231,11 +234,11 @@ final class SidebarViewController: NSViewController {
         result.append(thisMac)
 
         // Emplacements : les autres volumes. Le disque de demarrage figure deja
-        // sous "Ce Mac", l'afficher ici en ferait un doublon.
+        // sous L("Ce Mac"), l'afficher ici en ferait un doublon.
         let volumes = SidebarCatalog.mountedVolumes()
             .filter { $0.url.resolvingSymlinksInPath().path != "/" }
         if !volumes.isEmpty {
-            let header = SidebarNode(kind: .header, title: "Emplacements", symbol: "externaldrive")
+            let header = SidebarNode(kind: .header, title: L("Emplacements"), symbol: "externaldrive")
             header.isRealTree = true
             header.children = volumes.map { item in
                 let node = SidebarNode(kind: .volume,
@@ -251,7 +254,7 @@ final class SidebarViewController: NSViewController {
         }
 
         // Tags
-        let tagsHeader = SidebarNode(kind: .header, title: "Tags", symbol: "tag")
+        let tagsHeader = SidebarNode(kind: .header, title: L("Tags"), symbol: "tag")
         tagsHeader.children = TagManager.knownTags.map { name in
             let node = SidebarNode(kind: .tag, title: name, symbol: "circle.fill", location: .tag(name))
             node.parent = tagsHeader
@@ -260,12 +263,12 @@ final class SidebarViewController: NSViewController {
         result.append(tagsHeader)
 
         // Divers
-        let others = SidebarNode(kind: .header, title: "Divers", symbol: "ellipsis.circle")
+        let others = SidebarNode(kind: .header, title: L("Divers"), symbol: "ellipsis.circle")
         var otherChildren: [SidebarNode] = [
-            SidebarNode(kind: .special, title: "Recents", symbol: "clock", location: .recents)
+            SidebarNode(kind: .special, title: L("Recents"), symbol: "clock", location: .recents)
         ]
         if let trash = SidebarCatalog.trash {
-            let node = SidebarNode(kind: .special, title: "Corbeille", symbol: "trash",
+            let node = SidebarNode(kind: .special, title: L("Corbeille"), symbol: "trash",
                                    location: .folder(trash), url: trash)
             otherChildren.append(node)
         }
@@ -318,12 +321,12 @@ final class SidebarViewController: NSViewController {
         }
         // Meme quand le dossier figure dans l'acces rapide, on deplie
         // l'arborescence reelle : un clic sur un favori doit montrer ou il se
-        // situe sous "Ce Mac" ou "Emplacements".
+        // situe sous L("Ce Mac") ou L("Emplacements").
         revealInTree(url)
         if let row = rowForURL(url) { select(row: row) }
     }
 
-    /// Deplie "Ce Mac" puis "Emplacements" jusqu'au dossier vise.
+    /// Deplie L("Ce Mac") puis L("Emplacements") jusqu'au dossier vise.
     @discardableResult
     private func revealInTree(_ url: URL) -> SidebarNode? {
         let target = url.standardizedFileURL.path
@@ -459,8 +462,8 @@ extension SidebarViewController: NSMenuDelegate {
         menu.removeAllItems()
         guard let node = clickedOrSelectedNode(), !node.isHeader else { return }
 
-        menu.addItem(withTitle: "Ouvrir dans un nouvel onglet", action: #selector(menuOpenInNewTab), keyEquivalent: "")
-        menu.addItem(withTitle: "Ouvrir dans une nouvelle fenetre", action: #selector(menuOpenInNewWindow), keyEquivalent: "")
+        menu.addItem(withTitle: L("Ouvrir dans un nouvel onglet"), action: #selector(menuOpenInNewTab), keyEquivalent: "")
+        menu.addItem(withTitle: L("Ouvrir dans une nouvelle fenetre"), action: #selector(menuOpenInNewWindow), keyEquivalent: "")
         menu.addItem(.separator())
 
         // Le test porte sur la liste des favoris, pas sur la section cliquee :
@@ -468,24 +471,24 @@ extension SidebarViewController: NSMenuDelegate {
         // retirer, pas de l'ajouter une seconde fois.
         if let url = node.url {
             if AppSettings.shared.favoritePaths.contains(url.path) {
-                menu.addItem(withTitle: "Retirer de l'acces rapide", action: #selector(menuRemoveFromFavorites), keyEquivalent: "")
+                menu.addItem(withTitle: L("Retirer de l'acces rapide"), action: #selector(menuRemoveFromFavorites), keyEquivalent: "")
             } else {
-                menu.addItem(withTitle: "Ajouter a l'acces rapide", action: #selector(menuAddToFavorites), keyEquivalent: "")
+                menu.addItem(withTitle: L("Ajouter a l'acces rapide"), action: #selector(menuAddToFavorites), keyEquivalent: "")
             }
         }
 
         if node.kind == .volume, node.isEjectable {
-            menu.addItem(withTitle: "Ejecter", action: #selector(menuEject), keyEquivalent: "")
+            menu.addItem(withTitle: L("Ejecter"), action: #selector(menuEject), keyEquivalent: "")
         }
 
         if let url = node.url, !AccessManager.shared.canList(url) {
             menu.addItem(.separator())
-            menu.addItem(withTitle: "Autoriser l'acces...", action: #selector(menuGrantAccess), keyEquivalent: "")
+            menu.addItem(withTitle: L("Autoriser l'acces..."), action: #selector(menuGrantAccess), keyEquivalent: "")
         }
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Actualiser", action: #selector(menuRefresh), keyEquivalent: "")
-        menu.addItem(withTitle: "Afficher dans le Finder", action: #selector(menuRevealInFinder), keyEquivalent: "")
+        menu.addItem(withTitle: L("Actualiser"), action: #selector(menuRefresh), keyEquivalent: "")
+        menu.addItem(withTitle: L("Afficher dans le Finder"), action: #selector(menuRevealInFinder), keyEquivalent: "")
 
         for item in menu.items { item.target = self }
     }
@@ -528,7 +531,7 @@ extension SidebarViewController: NSOutlineViewDataSource {
         let urls = FileClipboard.shared.pasteboardURLsIn(info.draggingPasteboard)
         guard !urls.isEmpty else { return [] }
 
-        // Depot sur l'en-tete "Acces rapide" (ou entre deux de ses lignes) :
+        // Depot sur l'en-tete L("Acces rapide") (ou entre deux de ses lignes) :
         // les dossiers deposes deviennent des favoris.
         if node.isQuickAccess {
             guard Self.containsFolder(urls) else { return [] }
@@ -697,7 +700,7 @@ private final class SidebarCell: NSTableCellView {
             eject.bezelStyle = .inline
             eject.imageScaling = .scaleProportionallyDown
             eject.contentTintColor = .secondaryLabelColor
-            eject.toolTip = "Ejecter"
+            eject.toolTip = L("Ejecter")
             eject.isHidden = true
             eject.setButtonType(.momentaryChange)
             eject.translatesAutoresizingMaskIntoConstraints = false

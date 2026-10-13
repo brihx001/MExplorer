@@ -53,6 +53,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     private var nameObserver: NSObjectProtocol?
     private var sizeObserver: NSObjectProtocol?
     private var hiddenObserver: NSObjectProtocol?
+    private var languageObserver: NSObjectProtocol?
     private var watcher: DirectoryWatcher?
     private var search: SpotlightSearch?
     private var sizeToken = 0
@@ -86,6 +87,13 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         ) { [weak self] _ in
             self?.reload()
         }
+        // Le type d'un element ("Dossier", "Image PNG") est lu a la creation du
+        // FileItem : un changement de langue impose de les relire.
+        languageObserver = NotificationCenter.default.addObserver(
+            forName: L10n.changed, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.reload()
+        }
         if loadsImmediately { load() }
     }
 
@@ -95,6 +103,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         if let nameObserver { NotificationCenter.default.removeObserver(nameObserver) }
         if let sizeObserver { NotificationCenter.default.removeObserver(sizeObserver) }
         if let hiddenObserver { NotificationCenter.default.removeObserver(hiddenObserver) }
+        if let languageObserver { NotificationCenter.default.removeObserver(languageObserver) }
     }
 
     // MARK: - Navigation

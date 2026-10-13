@@ -27,7 +27,7 @@ final class InfoWindowController: NSWindowController {
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered, defer: false
         )
-        window.title = urls.count == 1 ? "\(urls[0].lastPathComponent) - Infos" : "\(urls.count) elements - Infos"
+        window.title = urls.count == 1 ? L("%@ - Infos", urls[0].lastPathComponent) : L("%d elements - Infos", urls.count)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: InfoView(urls: urls, model: model))
         window.center()
@@ -100,26 +100,26 @@ private struct InfoView: View {
 
     private var generalSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("General")
-            infoRow("Taille", totalSize.map { Fmt.size($0) } ?? "Calcul en cours...")
+            sectionTitle(L("General"))
+            infoRow(L("Taille"), totalSize.map { Fmt.size($0) } ?? L("Calcul en cours..."))
             if items.count == 1, let item = items.first {
-                infoRow("Emplacement", item.url.deletingLastPathComponent().path)
-                infoRow("Cree le", Fmt.date(item.creationDate))
-                infoRow("Modifie le", Fmt.date(item.modificationDate))
-                if let added = item.addedDate { infoRow("Ajoute le", Fmt.date(added)) }
-                if !item.fileExtension.isEmpty { infoRow("Extension", item.fileExtension) }
-                if let type = item.contentType { infoRow("Type UTI", type.identifier) }
+                infoRow(L("Emplacement"), item.url.deletingLastPathComponent().path)
+                infoRow(L("Cree le"), Fmt.date(item.creationDate))
+                infoRow(L("Modifie le"), Fmt.date(item.modificationDate))
+                if let added = item.addedDate { infoRow(L("Ajoute le"), Fmt.date(added)) }
+                if !item.fileExtension.isEmpty { infoRow(L("Extension"), item.fileExtension) }
+                if let type = item.contentType { infoRow(L("Type UTI"), type.identifier) }
             }
         }
     }
 
     private func nameSection(_ item: FileItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("Nom et extension")
+            sectionTitle(L("Nom et extension"))
             HStack {
-                TextField("Nom", text: $newName)
+                TextField(L("Nom"), text: $newName)
                     .textFieldStyle(.roundedBorder)
-                Button("Renommer") {
+                Button(L("Renommer")) {
                     model.rename(item.url, to: newName)
                 }
                 .disabled(newName == item.displayName || newName.isEmpty)
@@ -129,11 +129,11 @@ private struct InfoView: View {
 
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("Tags")
+            sectionTitle(L("Tags"))
             HStack {
-                TextField("Separes par des virgules", text: $tagsText)
+                TextField(L("Separes par des virgules"), text: $tagsText)
                     .textFieldStyle(.roundedBorder)
-                Button("Appliquer") {
+                Button(L("Appliquer")) {
                     let tags = tagsText.split(separator: ",")
                         .map { $0.trimmingCharacters(in: .whitespaces) }
                         .filter { !$0.isEmpty }
@@ -147,23 +147,23 @@ private struct InfoView: View {
 
     private func permissionsSection(_ item: FileItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("Autorisations")
-            infoRow("Acces", item.isWritable ? "Lecture et ecriture" : "Lecture seule")
+            sectionTitle(L("Autorisations"))
+            infoRow(L("Acces"), item.isWritable ? L("Lecture et ecriture") : L("Lecture seule"))
             if let posix = try? FileManager.default.attributesOfItem(atPath: item.url.path)[.posixPermissions] as? NSNumber {
-                infoRow("Mode POSIX", String(format: "%03o", posix.intValue & 0o777))
+                infoRow(L("Mode POSIX"), String(format: "%03o", posix.intValue & 0o777))
             }
             if let owner = try? FileManager.default.attributesOfItem(atPath: item.url.path)[.ownerAccountName] as? String {
-                infoRow("Proprietaire", owner)
+                infoRow(L("Proprietaire"), owner)
             }
         }
     }
 
     private func openWithSection(_ item: FileItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("Ouvrir avec")
+            sectionTitle(L("Ouvrir avec"))
             let apps = OpenWith.applications(for: item.url)
             if apps.isEmpty {
-                Text("Aucune application associee").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("Aucune application associee")).font(.system(size: 11)).foregroundStyle(.secondary)
             } else {
                 ForEach(apps.prefix(6), id: \.self) { app in
                     Button {

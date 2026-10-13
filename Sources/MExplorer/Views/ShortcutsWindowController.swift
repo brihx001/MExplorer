@@ -18,7 +18,7 @@ final class ShortcutsWindowController: NSWindowController {
     private init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
                               styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        window.title = "Raccourcis clavier"
+        window.title = L("Raccourcis clavier")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: ShortcutsView())
         window.center()
@@ -31,37 +31,37 @@ final class ShortcutsWindowController: NSWindowController {
 private struct ShortcutsView: View {
 
     private let groups: [(String, [(String, String)])] = [
-        ("Navigation", [
-            ("Precedent", "Cmd ["),
-            ("Suivant", "Cmd ]"),
-            ("Dossier parent", "Cmd Haut"),
-            ("Ouvrir la selection", "Entree ou Cmd Bas"),
-            ("Saisir un chemin", "Cmd L"),
-            ("Actualiser", "Cmd R ou F5")
+        (L("Navigation"), [
+            (L("Precedent"), L("Cmd [")),
+            (L("Suivant"), L("Cmd ]")),
+            (L("Dossier parent"), L("Cmd Haut")),
+            (L("Ouvrir la selection"), L("Entree ou Cmd Bas")),
+            (L("Saisir un chemin"), L("Cmd L")),
+            (L("Actualiser"), L("Cmd R ou F5"))
         ]),
-        ("Onglets et fenetres", [
-            ("Nouvel onglet", "Cmd T"),
-            ("Fermer l'onglet", "Cmd W"),
-            ("Onglet suivant / precedent", "Cmd Alt Droite / Gauche"),
-            ("Nouvelle fenetre", "Cmd N")
+        (L("Onglets et fenetres"), [
+            (L("Nouvel onglet"), L("Cmd T")),
+            (L("Fermer l'onglet"), L("Cmd W")),
+            (L("Onglet suivant / precedent"), L("Cmd Alt Droite / Gauche")),
+            (L("Nouvelle fenetre"), L("Cmd N"))
         ]),
-        ("Fichiers", [
-            ("Couper / Copier / Coller", "Cmd X / C / V"),
-            ("Copier le chemin", "Cmd Alt Maj C"),
-            ("Renommer", "F2"),
-            ("Nouveau dossier", "Cmd Maj N"),
-            ("Corbeille", "Suppr ou Cmd Suppr"),
-            ("Suppression definitive", "Maj Suppr"),
-            ("Dupliquer", "Cmd D"),
-            ("Coup d'oeil", "Espace"),
-            ("Informations", "Cmd I"),
-            ("Annuler", "Cmd Z")
+        (L("Fichiers"), [
+            (L("Couper / Copier / Coller"), L("Cmd X / C / V")),
+            (L("Copier le chemin"), L("Cmd Alt Maj C")),
+            (L("Renommer"), L("F2")),
+            (L("Nouveau dossier"), L("Cmd Maj N")),
+            (L("Corbeille"), L("Suppr ou Cmd Suppr")),
+            (L("Suppression definitive"), L("Maj Suppr")),
+            (L("Dupliquer"), L("Cmd D")),
+            (L("Coup d'oeil"), L("Espace")),
+            (L("Informations"), L("Cmd I")),
+            (L("Annuler"), L("Cmd Z"))
         ]),
-        ("Affichage", [
-            ("Modes d'affichage", "Cmd 1 a Cmd 8"),
-            ("Volet de navigation", "Cmd Ctrl S"),
-            ("Volet de details", "Cmd Maj P"),
-            ("Elements masques", "Cmd Maj .")
+        (L("Affichage"), [
+            (L("Modes d'affichage"), L("Cmd 1 a Cmd 8")),
+            (L("Volet de navigation"), L("Cmd Ctrl S")),
+            (L("Volet de details"), L("Cmd Maj P")),
+            (L("Elements masques"), L("Cmd Maj ."))
         ])
     ]
 
