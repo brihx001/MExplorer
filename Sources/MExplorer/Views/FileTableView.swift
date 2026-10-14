@@ -7,13 +7,43 @@ final class FileTableView: NSTableView {
 
     var onKeyDown: ((NSEvent) -> Bool)?
     var onMenuForRow: ((Int) -> NSMenu?)?
+    /// Clic simple sur une ligne deja seule selectionnee : candidat au
+    /// renommage par deux clics lents (ligne, colonne cliquee).
+    var onSlowClick: ((Int, Int) -> Void)?
+    /// Tout le reste annule un renommage en attente.
+    var onInterrupt: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
+        onInterrupt?()
         if onKeyDown?(event) == true { return }
         super.keyDown(with: event)
     }
 
+    override func scrollWheel(with event: NSEvent) {
+        onInterrupt?()
+        super.scrollWheel(with: event)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onInterrupt?()
+        let point = convert(event.locationInWindow, from: nil)
+        let row = self.row(at: point)
+        let column = self.column(at: point)
+        let aloneBefore = row >= 0 && selectedRowIndexes.count == 1 && selectedRowIndexes.contains(row)
+        let origin = NSEvent.mouseLocation
+
+        // Rend la main une fois le clic traite : selection faite, glissement
+        // eventuel termine.
+        super.mouseDown(with: event)
+
+        guard column >= 0,
+              SlowClickRenamer.qualifies(event: event, wasAloneSelected: aloneBefore, mouseOrigin: origin),
+              selectedRowIndexes.count == 1, selectedRowIndexes.contains(row) else { return }
+        onSlowClick?(row, column)
+    }
+
     override func menu(for event: NSEvent) -> NSMenu? {
+        onInterrupt?()
         let point = convert(event.locationInWindow, from: nil)
         let row = self.row(at: point)
         if row >= 0 && !selectedRowIndexes.contains(row) {

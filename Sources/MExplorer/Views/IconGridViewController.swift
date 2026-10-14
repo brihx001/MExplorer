@@ -49,6 +49,10 @@ final class IconGridViewController: NSViewController, FileAreaController {
         collectionView.setDraggingSourceOperationMask([.copy, .move], forLocal: true)
         collectionView.onKeyDown = { [weak self] event in self?.handleKey(event) ?? false }
         collectionView.onContextMenu = { [weak self] in self?.contextMenu() }
+        collectionView.onInterrupt = { [weak self] in self?.slowRename.cancel() }
+        collectionView.onSlowClick = { [weak self] path, point in
+            self?.scheduleSlowRename(at: path, windowPoint: point)
+        }
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(doubleClicked(_:)))
         click.numberOfClicksRequired = 2
@@ -83,6 +87,7 @@ final class IconGridViewController: NSViewController, FileAreaController {
     func rebuildColumns() { applyLayout() }
 
     func reloadContent() {
+        slowRename.cancel()
         sections = buildSections()
         collectionView.reloadData()
         applySelection(tab?.selectedURLs ?? [])
@@ -99,6 +104,19 @@ final class IconGridViewController: NSViewController, FileAreaController {
         isApplyingSelection = true
         collectionView.selectionIndexPaths = paths
         isApplyingSelection = false
+    }
+
+    private let slowRename = SlowClickRenamer()
+
+    private func scheduleSlowRename(at path: IndexPath, windowPoint: NSPoint) {
+        guard let item = collectionView.item(at: path) as? FileGridItem,
+              item.isInsideName(windowPoint: windowPoint),
+              let url = sections[safe: path.section]?.items[safe: path.item]?.url else { return }
+        slowRename.schedule { [weak self] in
+            guard let self, let current = self.indexPath(for: url),
+                  self.collectionView.selectionIndexPaths == [current] else { return }
+            self.beginRename(url)
+        }
     }
 
     func beginRename(_ url: URL) {
@@ -328,13 +346,38 @@ extension IconGridViewController: NSCollectionViewDelegate {
 final class FileCollectionView: NSCollectionView {
     var onKeyDown: ((NSEvent) -> Bool)?
     var onContextMenu: (() -> NSMenu?)?
+    /// Clic simple sur un element deja seul selectionne : candidat au
+    /// renommage par deux clics lents (element, point en coordonnees fenetre).
+    var onSlowClick: ((IndexPath, NSPoint) -> Void)?
+    var onInterrupt: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
+        onInterrupt?()
         if onKeyDown?(event) == true { return }
         super.keyDown(with: event)
     }
 
+    override func scrollWheel(with event: NSEvent) {
+        onInterrupt?()
+        super.scrollWheel(with: event)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onInterrupt?()
+        let path = indexPathForItem(at: convert(event.locationInWindow, from: nil))
+        let aloneBefore = path.map { selectionIndexPaths == [$0] } ?? false
+        let origin = NSEvent.mouseLocation
+
+        super.mouseDown(with: event)
+
+        guard let path,
+              SlowClickRenamer.qualifies(event: event, wasAloneSelected: aloneBefore, mouseOrigin: origin),
+              selectionIndexPaths == [path] else { return }
+        onSlowClick?(path, event.locationInWindow)
+    }
+
     override func menu(for event: NSEvent) -> NSMenu? {
+        onInterrupt?()
         let point = convert(event.locationInWindow, from: nil)
         if let path = indexPathForItem(at: point), !selectionIndexPaths.contains(path) {
             selectionIndexPaths = [path]
@@ -505,6 +548,11 @@ final class FileGridItem: NSCollectionViewItem, NSTextFieldDelegate {
         renameHandler = nil
         label.isEditable = false
         isSelected = false
+    }
+
+    /// Comme le Finder, seul un clic sur le nom arme le renommage.
+    func isInsideName(windowPoint: NSPoint) -> Bool {
+        label.bounds.contains(label.convert(windowPoint, from: nil))
     }
 
     func beginEditing(_ handler: @escaping (String) -> Void) {

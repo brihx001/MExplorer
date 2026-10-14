@@ -118,6 +118,12 @@ pour cela.
   dependant de sa presence dans la liste.
 - **Barre de commandes** : Nouveau, Couper, Copier, Coller, Renommer, Partager,
   Corbeille, Trier, Afficher, menu « ... ».
+- **Renommage** : F2, le menu contextuel, le bouton de la barre de commandes,
+  ou **deux clics lents** sur le nom d'un element deja selectionne, comme le
+  Finder. Le delai depasse l'intervalle de double-clic du systeme, et tout
+  autre evenement (clic, touche, defilement, menu contextuel, glissement)
+  annule. En mode icones, seul un clic sur le nom arme le renommage, pas sur
+  l'icone ; en mode Details, seule la colonne Nom.
 - **Conflit de nom** : copier ou deplacer un element vers un dossier qui en
   contient deja un du meme nom propose de **conserver les deux**, de
   **remplacer** ou d'**annuler**, comme le Finder. Le remplacement passe par un

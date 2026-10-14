@@ -11,6 +11,7 @@ final class FileListViewController: NSViewController, FileAreaController {
     private var rows: [ListRow] = []
     private var isApplyingSelection = false
     private var renameTargetURL: URL?
+    private let slowRename = SlowClickRenamer()
     /// Elements du glissement en cours, pour savoir quoi mettre a la corbeille
     /// si le depot se fait sur la Corbeille du Dock.
     private var draggedURLs: [URL] = []
@@ -76,6 +77,11 @@ final class FileListViewController: NSViewController, FileAreaController {
         view = scrollView
         rebuildColumns()
 
+        tableView.onInterrupt = { [weak self] in self?.slowRename.cancel() }
+        tableView.onSlowClick = { [weak self] row, column in
+            self?.scheduleSlowRename(row: row, column: column)
+        }
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(columnDidResize(_:)),
             name: NSTableView.columnDidResizeNotification, object: tableView)
@@ -118,6 +124,7 @@ final class FileListViewController: NSViewController, FileAreaController {
     }
 
     func reloadContent() {
+        slowRename.cancel()
         rows = tab?.rows ?? []
         // Les bandes alternees derriere un dossier vide font croire a un contenu.
         tableView.usesAlternatingRowBackgroundColors = !rows.isEmpty
@@ -136,6 +143,23 @@ final class FileListViewController: NSViewController, FileAreaController {
         tableView.selectRowIndexes(indexes, byExtendingSelection: false)
         isApplyingSelection = false
         if let first = indexes.first { tableView.scrollRowToVisible(first) }
+    }
+
+    /// Le renommage n'est arme que sur la colonne du nom, et seulement si
+    /// l'element clique est toujours le seul selectionne quand le delai expire.
+    private func scheduleSlowRename(row: Int, column: Int) {
+        guard rows.indices.contains(row), let url = rows[row].item?.url,
+              tableView.tableColumns.indices.contains(column),
+              tableView.tableColumns[column].identifier.rawValue == ColumnID.name.rawValue
+        else { return }
+        slowRename.schedule { [weak self] in
+            guard let self,
+                  self.tableView.selectedRowIndexes.count == 1,
+                  let selected = self.tableView.selectedRowIndexes.first,
+                  self.rows.indices.contains(selected),
+                  self.rows[selected].item?.url == url else { return }
+            self.beginRename(url)
+        }
     }
 
     func beginRename(_ url: URL) {
