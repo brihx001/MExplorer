@@ -252,7 +252,7 @@ final class WindowModel: ObservableObject {
             : L("Supprimer definitivement ces %d elements ?", urls.count)
         alert.informativeText = L("Cette action est irreversible. Les elements ne passeront pas par la corbeille.")
         alert.addButton(withTitle: L("Supprimer"))
-        alert.addButton(withTitle: L("Annuler"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
             FileOperations.shared.deletePermanently(urls) { error in
@@ -373,7 +373,7 @@ final class WindowModel: ObservableObject {
         alert.messageText = L("Nouveau tag")
         alert.informativeText = L("Nom du tag a appliquer a la selection.")
         alert.addButton(withTitle: L("Appliquer"))
-        alert.addButton(withTitle: L("Annuler"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
@@ -402,7 +402,7 @@ final class WindowModel: ObservableObject {
         alert.messageText = L("Vider la corbeille ?")
         alert.informativeText = L("Les elements seront supprimes definitivement.")
         alert.addButton(withTitle: L("Vider"))
-        alert.addButton(withTitle: L("Annuler"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
             FileOperations.shared.emptyTrash { error in

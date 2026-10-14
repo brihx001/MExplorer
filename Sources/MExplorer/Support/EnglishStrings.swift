@@ -286,5 +286,13 @@ enum EnglishStrings {
         "Zoom": "Zoom",
         "iCloud Drive": "iCloud Drive",
         "nouveau dossier": "new folder",
+        "%d elements portent deja ces noms a cet emplacement.": "%d items with these names already exist at this location.",
+        "Conservez les deux, remplacez l'element existant, ou annulez la copie.": "Keep both, replace the existing item, or cancel the copy.",
+        "Conservez les deux, remplacez l'element existant, ou annulez le deplacement.": "Keep both, replace the existing item, or cancel the move.",
+        "Conserver les deux": "Keep both",
+        "Remplacer": "Replace",
+        "bouton|Annuler": "Cancel",
+        "Conservez les deux, remplacez les elements existants, ou annulez la copie.": "Keep both, replace the existing items, or cancel the copy.",
+        "Conservez les deux, remplacez les elements existants, ou annulez le deplacement.": "Keep both, replace the existing items, or cancel the move.",
     ]
 }

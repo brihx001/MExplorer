@@ -118,6 +118,12 @@ pour cela.
   dependant de sa presence dans la liste.
 - **Barre de commandes** : Nouveau, Couper, Copier, Coller, Renommer, Partager,
   Corbeille, Trier, Afficher, menu « ... ».
+- **Conflit de nom** : copier ou deplacer un element vers un dossier qui en
+  contient deja un du meme nom propose de **conserver les deux**, de
+  **remplacer** ou d'**annuler**, comme le Finder. Le remplacement passe par un
+  nom temporaire puis un echange atomique : l'element existant n'est detruit
+  qu'une fois le nouveau en place. Il n'est pas annulable, l'ancien contenu
+  n'existant plus.
 - **Barre d'adresse** : boutons Precedent / Suivant / Parent / Actualiser,
   fil d'Ariane cliquable avec menu de sous-dossiers sur chaque chevron,
   bascule en champ de saisie de chemin (Cmd L), champ de recherche.

@@ -154,28 +154,123 @@ final class FileOperations {
         }
     }
 
+    /// Choix de l'utilisateur quand un element du meme nom existe deja.
+    enum ConflictResolution { case keepBoth, replace }
+
     func transfer(_ urls: [URL],
                   to destination: URL,
                   kind: TransferKind,
                   undoManager: UndoManager? = nil,
                   completion: (([URL], Error?) -> Void)? = nil) {
         guard !urls.isEmpty else { completion?([], nil); return }
+
+        // Un element deplace ou copie dans son propre dossier n'est pas un
+        // conflit : le premier cas est sans effet, le second est un doublon
+        // volontaire, qui prend un nom libre comme le fait le Finder.
+        let fm = FileManager.default
+        let conflicts = urls.filter { source in
+            source.deletingLastPathComponent().standardizedFileURL != destination.standardizedFileURL
+                && fm.fileExists(atPath: destination.appendingPathComponent(source.lastPathComponent).path)
+        }
+        guard !conflicts.isEmpty else {
+            perform(urls, to: destination, kind: kind, resolution: .keepBoth,
+                    undoManager: undoManager, completion: completion)
+            return
+        }
+        askConflict(conflicts.map(\.lastPathComponent), kind: kind) { [weak self] resolution in
+            guard let self else { return }
+            guard let resolution else { completion?([], nil); return }
+            self.perform(urls, to: destination, kind: kind, resolution: resolution,
+                         undoManager: undoManager, completion: completion)
+        }
+    }
+
+    /// Propose de conserver les deux elements, de remplacer, ou d'annuler.
+    /// `nil` en reponse signifie annuler.
+    private func askConflict(_ names: [String],
+                             kind: TransferKind,
+                             completion: @escaping (ConflictResolution?) -> Void) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = names.count == 1
+            ? L("Un element nomme \"%@\" existe deja a cet emplacement.", names[0])
+            : L("%d elements portent deja ces noms a cet emplacement.", names.count)
+        let single = names.count == 1
+        switch (kind, single) {
+        case (.copy, true):
+            alert.informativeText = L("Conservez les deux, remplacez l'element existant, ou annulez la copie.")
+        case (.copy, false):
+            alert.informativeText = L("Conservez les deux, remplacez les elements existants, ou annulez la copie.")
+        case (.move, true):
+            alert.informativeText = L("Conservez les deux, remplacez l'element existant, ou annulez le deplacement.")
+        case (.move, false):
+            alert.informativeText = L("Conservez les deux, remplacez les elements existants, ou annulez le deplacement.")
+        }
+        alert.addButton(withTitle: L("Conserver les deux"))
+        alert.addButton(withTitle: L("Remplacer"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
+
+        let handle: (NSApplication.ModalResponse) -> Void = { response in
+            switch response {
+            case .alertFirstButtonReturn: completion(.keepBoth)
+            case .alertSecondButtonReturn: completion(.replace)
+            default: completion(nil)
+            }
+        }
+        if let window = NSApp.keyWindow {
+            alert.beginSheetModal(for: window, completionHandler: handle)
+        } else {
+            handle(alert.runModal())
+        }
+    }
+
+    private func perform(_ urls: [URL],
+                         to destination: URL,
+                         kind: TransferKind,
+                         resolution: ConflictResolution,
+                         undoManager: UndoManager?,
+                         completion: (([URL], Error?) -> Void)?) {
         let opKind: FileOperationProgress.Kind = (kind == .copy) ? .copy : .move
 
         run(kind: opKind, count: urls.count) { report in
             var created: [URL] = []
             var failure: Error?
+            var replacedAny = false
             let fm = FileManager.default
             for (index, source) in urls.enumerated() {
                 report(index, source.lastPathComponent)
-                if source.deletingLastPathComponent().standardizedFileURL == destination.standardizedFileURL,
-                   kind == .move { continue }
+                let sameFolder = source.deletingLastPathComponent().standardizedFileURL == destination.standardizedFileURL
+                if sameFolder, kind == .move { continue }
                 var target = destination.appendingPathComponent(source.lastPathComponent)
-                if fm.fileExists(atPath: target.path) { target = Self.uniqueURL(for: target) }
+                var replacing = false
+                if fm.fileExists(atPath: target.path) {
+                    if resolution == .replace && !sameFolder {
+                        replacing = true
+                    } else {
+                        target = Self.uniqueURL(for: target)
+                    }
+                }
                 do {
-                    switch kind {
-                    case .copy: try fm.copyItem(at: source, to: target)
-                    case .move: try fm.moveItem(at: source, to: target)
+                    if replacing {
+                        // Ecriture sous un nom temporaire puis echange : l'element
+                        // existant n'est detruit qu'une fois le nouveau en place.
+                        let temp = destination.appendingPathComponent(".mexplorer-\(UUID().uuidString)")
+                        switch kind {
+                        case .copy: try fm.copyItem(at: source, to: temp)
+                        case .move: try fm.moveItem(at: source, to: temp)
+                        }
+                        do {
+                            _ = try fm.replaceItemAt(target, withItemAt: temp)
+                        } catch {
+                            try? fm.removeItem(at: temp)
+                            throw error
+                        }
+                        replacedAny = true
+                    } else {
+                        switch kind {
+                        case .copy: try fm.copyItem(at: source, to: target)
+                        case .move: try fm.moveItem(at: source, to: target)
+                        }
                     }
                     created.append(target)
                 } catch {
@@ -183,11 +278,14 @@ final class FileOperations {
                 }
             }
             self.lastCreated = created
+            self.lastReplaced = replacedAny
             return failure
         } completion: { [weak self] error in
             guard let self else { return }
             let created = self.lastCreated
-            if error == nil, !created.isEmpty {
+            // Un remplacement a detruit l'element precedent : annuler ne ferait
+            // que supprimer le nouveau sans rendre l'ancien.
+            if error == nil, !created.isEmpty, !self.lastReplaced {
                 undoManager?.registerUndo(withTarget: self) { target in
                     switch kind {
                     case .copy:
@@ -207,6 +305,7 @@ final class FileOperations {
     }
 
     private var lastCreated: [URL] = []
+    private var lastReplaced = false
 
     func duplicate(_ urls: [URL], undoManager: UndoManager? = nil, completion: (([URL], Error?) -> Void)? = nil) {
         run(kind: .copy, count: urls.count) { report in

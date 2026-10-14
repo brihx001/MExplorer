@@ -146,7 +146,9 @@ final class FileListViewController: NSViewController, FileAreaController {
         guard let nameColumn = tableView.tableColumns.firstIndex(where: { $0.identifier.rawValue == ColumnID.name.rawValue })
         else { return }
         tableView.scrollRowToVisible(index)
-        tableView.editColumn(nameColumn, row: index, with: nil, select: true)
+        guard let cell = tableView.view(atColumn: nameColumn, row: index, makeIfNecessary: true) as? FileNameCell
+        else { return }
+        cell.beginEditing()
     }
 
     func frameOnScreen(for url: URL) -> NSRect? {
@@ -521,7 +523,7 @@ extension FileListViewController: NSTextFieldDelegate {
         let row = tableView.row(for: field)
         guard rows.indices.contains(row), let item = rows[row].item else { return }
         let newName = field.stringValue
-        field.isEditable = false
+        (field.superview as? FileNameCell)?.endEditing()
         guard newName != item.displayName, !newName.isEmpty else {
             field.stringValue = item.displayName
             return
@@ -582,12 +584,29 @@ final class FileNameCell: NSTableCellView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) non supporte") }
 
+    /// Passe le libelle en edition. `isSelectable` doit etre remis a vrai :
+    /// NSTextField remet `isEditable` a faux des qu'un champ cesse d'etre
+    /// selectionnable, et le champ ne pouvait alors plus prendre le focus.
+    func beginEditing() {
+        label.isSelectable = true
+        label.isEditable = true
+        window?.makeFirstResponder(label)
+        label.currentEditor()?.selectAll(nil)
+    }
+
+    func endEditing() {
+        label.isEditable = false
+        label.isSelectable = false
+    }
+
     func configure(with item: FileItem, delegate: NSTextFieldDelegate) {
         currentURL = item.url
         icon.image = IconCache.shared.icon(for: item)
         label.stringValue = displayName(for: item)
         label.delegate = delegate
-        label.isEditable = true
+        // Hors renommage, le libelle n'est ni editable ni selectionnable :
+        // un champ selectionnable intercepterait les clics de la ligne.
+        label.isEditable = false
         label.isSelectable = false
         label.textColor = item.isHidden ? .secondaryLabelColor : .labelColor
 

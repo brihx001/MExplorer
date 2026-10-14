@@ -56,6 +56,13 @@ func L(_ key: String) -> String {
     L10n.table[key] ?? key
 }
 
+/// Variante pour les libelles identiques en francais mais distincts ailleurs :
+/// "Annuler" vaut *Undo* dans le menu Edition et *Cancel* sur un bouton. La
+/// table porte alors la cle "<contexte>|<libelle>".
+func L(_ key: String, context: String) -> String {
+    L10n.table["\(context)|\(key)"] ?? L10n.table[key] ?? key
+}
+
 /// Variante a trous, pour les libelles qui portent une valeur.
 /// Le gabarit utilise les marqueurs de `String(format:)` (`%@`, `%d`).
 func L(_ key: String, _ arguments: CVarArg...) -> String {
