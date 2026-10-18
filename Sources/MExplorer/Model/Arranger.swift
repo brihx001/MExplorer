@@ -85,7 +85,8 @@ enum Arranger {
 
         var buckets: [String: (title: String, order: Int, items: [FileItem])] = [:]
         for item in sorted {
-            let b = bucket(item, key: settings.groupKey)
+            let b = bucket(item, key: settings.groupKey,
+                           foldersHaveSize: settings.calculateFolderSizes)
             buckets[b.key, default: (b.title, b.order, [])].items.append(item)
         }
         let ordered = buckets.sorted { lhs, rhs in
@@ -103,7 +104,12 @@ enum Arranger {
         return rows
     }
 
-    private static func bucket(_ item: FileItem, key: GroupKey) -> (key: String, title: String, order: Int) {
+    /// `foldersHaveSize` : la taille reelle des dossiers est calculee, un
+    /// dossier peut donc rejoindre une tranche de taille au lieu d'un groupe a
+    /// part.
+    private static func bucket(_ item: FileItem,
+                               key: GroupKey,
+                               foldersHaveSize: Bool) -> (key: String, title: String, order: Int) {
         switch key {
         case .none:
             return ("", "", 0)
@@ -128,7 +134,10 @@ enum Arranger {
             return (tag, tag, 0)
 
         case .size:
-            guard let size = item.effectiveSize, !item.isNavigableContainer else {
+            // Sans calcul, un dossier n'a pas de taille a comparer : il garde
+            // son groupe a part, comme avant.
+            guard let size = item.effectiveSize,
+                  foldersHaveSize || !item.isNavigableContainer else {
                 return ("__folder", L("Dossiers"), 0)
             }
             switch size {

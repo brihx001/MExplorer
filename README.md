@@ -86,7 +86,10 @@ access.
   as they arrive. The computation also runs outside the details view when the
   sort depends on it. Switched off from *View > Compute folder sizes*, folders
   go back to being grouped first, since they then have no size to compare.
-- **Sorting, grouping, filtering**, with collapsible group headers.
+- **Sorting, grouping, filtering**, with collapsible group headers. Grouping by
+  size uses the computed folder sizes too, so a folder lands in a size bucket
+  rather than in a group of its own; without the computation it goes back to a
+  *Folders* group.
 - **File operations**: cut, copy, paste, rename, duplicate, alias, compress,
   trash, permanent deletion, undo. A name conflict offers to keep both, replace
   or cancel, like the Finder.
@@ -268,7 +271,10 @@ pour cela.
   dossiers, le tri regroupe a nouveau les dossiers en tete : ils n'ont plus de
   taille a comparer.
 - **Regroupement** : aucun, nom, type, taille, date de modification, tags,
-  avec en-tetes repliables.
+  avec en-tetes repliables. Le regroupement par taille s'appuie lui aussi sur
+  la taille calculee des dossiers : un dossier rejoint alors la tranche qui lui
+  correspond au lieu d'un groupe a part, et retrouve le groupe « Dossiers »
+  quand le calcul est desactive.
 - **Tri par date** : fichiers et dossiers sont intercales. L'option « Dossiers
   en premier » ne s'applique pas aux colonnes de date, ou elle masquerait
   justement ce que l'on cherche a voir.
