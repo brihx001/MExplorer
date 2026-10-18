@@ -22,8 +22,13 @@ enum Arranger {
     static func sort(_ items: [FileItem], settings: FolderViewSettings) -> [FileItem] {
         let asc = settings.ascending
         // Un tri par date melange dossiers et fichiers : regrouper les dossiers
-        // en tete masquerait justement ce que l'on cherche a voir.
-        let foldersFirst = settings.foldersFirst && !settings.sortKey.ignoresFolderGrouping
+        // en tete masquerait justement ce que l'on cherche a voir. Le tri par
+        // taille fait de meme des lors que la taille reelle des dossiers est
+        // calculee ; sans elle, un dossier n'aurait aucune valeur a comparer et
+        // se retrouverait relegue en bout de liste.
+        let interleaves = settings.sortKey.ignoresFolderGrouping
+            || (settings.sortKey == .size && settings.calculateFolderSizes)
+        let foldersFirst = settings.foldersFirst && !interleaves
         return items.sorted { a, b in
             if foldersFirst && a.isNavigableContainer != b.isNavigableContainer {
                 return a.isNavigableContainer

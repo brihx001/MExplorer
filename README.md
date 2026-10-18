@@ -80,8 +80,12 @@ access.
 - **Eight view modes**, from extra large icons to a multi-column details list
   with sortable, resizable, reorderable columns whose widths are remembered per
   folder.
-- **Real folder sizes** in the details view, computed in the background, one
-  folder at a time, and cached until the folder changes.
+- **Real folder sizes**, computed in the background, one folder at a time, and
+  cached until the folder changes. Sorting by size uses them: folders and files
+  are then interleaved by their actual size, and the order follows the values
+  as they arrive. The computation also runs outside the details view when the
+  sort depends on it. Switched off from *View > Compute folder sizes*, folders
+  go back to being grouped first, since they then have no size to compare.
 - **Sorting, grouping, filtering**, with collapsible group headers.
 - **File operations**: cut, copy, paste, rename, duplicate, alias, compress,
   trash, permanent deletion, undo. A name conflict offers to keep both, replace
@@ -255,10 +259,14 @@ pour cela.
   Ajoute le, Tags, Extension, Chemin. Colonnes redimensionnables, reordonnables,
   triables par clic sur l'en-tete (un second clic inverse le sens), activables
   par clic droit sur l'en-tete. Largeurs memorisees par dossier.
-- **Taille reelle des dossiers** en mode Details : calculee en tache de fond,
-  un dossier a la fois, affichee au fur et a mesure et memorisee tant que le
-  dossier n'a pas change. Le tri par taille suit les valeurs qui arrivent.
-  Desactivable via Afficher > Calculer la taille des dossiers.
+- **Taille reelle des dossiers** : calculee en tache de fond, un dossier a la
+  fois, affichee au fur et a mesure en mode Details et memorisee tant que le
+  dossier n'a pas change. Le **tri par taille s'appuie dessus** : dossiers et
+  fichiers sont alors intercales selon leur taille reelle, et l'ordre suit les
+  valeurs qui arrivent. Le calcul se declenche aussi hors du mode Details des
+  que le tri en depend. Desactive via Afficher > Calculer la taille des
+  dossiers, le tri regroupe a nouveau les dossiers en tete : ils n'ont plus de
+  taille a comparer.
 - **Regroupement** : aucun, nom, type, taille, date de modification, tags,
   avec en-tetes repliables.
 - **Tri par date** : fichiers et dossiers sont intercales. L'option « Dossiers

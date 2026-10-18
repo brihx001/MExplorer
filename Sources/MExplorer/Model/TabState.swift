@@ -344,10 +344,13 @@ final class TabState: NSObject, ObservableObject, Identifiable {
 
     /// Vrai si la colonne Taille est affichee et doit montrer la taille reelle
     /// des dossiers.
+    /// Les tailles de dossiers sont calculees quand elles sont affichees
+    /// (colonne Taille du mode Details) ou quand le tri en depend, quel que
+    /// soit le mode d'affichage.
     private var wantsFolderSizes: Bool {
-        settings.viewMode == .details
-            && settings.calculateFolderSizes
-            && settings.visibleColumns.contains(.size)
+        guard settings.calculateFolderSizes else { return false }
+        if settings.sortKey == .size { return true }
+        return settings.viewMode == .details && settings.visibleColumns.contains(.size)
     }
 
     /// Lance (ou arrete) le calcul des tailles pour le contenu affiche.
@@ -431,6 +434,8 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         settings = s
         persistSettings()
         rebuildRows()
+        // Passer au tri par taille doit lancer le calcul s'il ne tournait pas.
+        requestFolderSizes()
     }
 
     /// Le reglage est global : toutes les fenetres et tous les onglets
