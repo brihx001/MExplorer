@@ -55,6 +55,11 @@ private struct PreferencesView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            Picker(L("Theme"), selection: $settings.theme) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.title).tag(theme)
+                }
+            }
             Divider()
             Toggle(L("Afficher les elements masques"), isOn: $settings.showHiddenItems)
             Toggle(L("Afficher les extensions de noms de fichiers"), isOn: $settings.showFileExtensions)

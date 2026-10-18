@@ -294,5 +294,9 @@ enum EnglishStrings {
         "bouton|Annuler": "Cancel",
         "Conservez les deux, remplacez les elements existants, ou annulez la copie.": "Keep both, replace the existing items, or cancel the copy.",
         "Conservez les deux, remplacez les elements existants, ou annulez le deplacement.": "Keep both, replace the existing items, or cancel the move.",
+        "Theme": "Theme",
+        "Theme du systeme": "System theme",
+        "Clair": "Light",
+        "Sombre": "Dark",
     ]
 }

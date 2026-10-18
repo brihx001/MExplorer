@@ -10,8 +10,12 @@ enum Fmt {
         return f
     }()
 
+    /// Les dates suivent le format du systeme (Reglages > Langue et region),
+    /// pas la langue choisie dans l'application : c'est celui que l'utilisateur
+    /// voit partout ailleurs sur son Mac.
     static let dateTime: DateFormatter = {
         let f = DateFormatter()
+        f.locale = .autoupdatingCurrent
         f.dateStyle = .short
         f.timeStyle = .short
         f.doesRelativeDateFormatting = false
@@ -20,6 +24,7 @@ enum Fmt {
 
     static let dateOnly: DateFormatter = {
         let f = DateFormatter()
+        f.locale = .autoupdatingCurrent
         f.dateStyle = .medium
         f.timeStyle = .none
         return f
@@ -35,18 +40,10 @@ enum Fmt {
         return dateTime.string(from: d)
     }
 
-    /// Aligne les dates sur la langue de l'interface : sans cela elles
-    /// resteraient dans la langue du systeme.
-    static func applyLocale(for language: AppLanguage) {
-        let locale = Locale(identifier: language.resolved == .french ? "fr_FR" : "en_US")
-        dateTime.locale = locale
-        dateOnly.locale = locale
-        relative.locale = locale
-    }
-
     /// "il y a 3 min", utilise dans le volet de details.
     static let relative: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
+        f.locale = .autoupdatingCurrent
         f.unitsStyle = .full
         return f
     }()

@@ -46,7 +46,6 @@ enum L10n {
         case .english: table = EnglishStrings.table
         default: table = [:]
         }
-        Fmt.applyLocale(for: language)
         NotificationCenter.default.post(name: changed, object: nil)
     }
 }

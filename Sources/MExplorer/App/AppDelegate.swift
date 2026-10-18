@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Avant toute construction d'interface : les menus et les fenetres
         // lisent leurs libelles a l'instant ou ils sont crees.
         L10n.apply(AppSettings.shared.language)
+        AppSettings.shared.theme.apply()
         // Les menus sont construits une fois : il faut les refaire quand la
         // langue change.
         NotificationCenter.default.addObserver(forName: L10n.changed, object: nil, queue: .main) { _ in

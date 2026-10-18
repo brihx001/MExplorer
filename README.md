@@ -11,6 +11,121 @@ commandes, le fil d'Ariane et le volet de details.
 
 [![Build](https://github.com/brihx001/MExplorer/actions/workflows/build.yml/badge.svg)](https://github.com/brihx001/MExplorer/actions/workflows/build.yml)
 
+**[English](#in-english)** · **[Francais](#en-francais)**
+
+## In English
+
+A native macOS file explorer with the ergonomics of the Windows 11 Explorer
+(full folder tree, tabs, command bar, breadcrumb, grouping), built on the
+Finder's own services (Quick Look, tags, aliases, Spotlight, sharing,
+services).
+
+Written in Swift 6: AppKit for the high-volume views (tree, multi-column list,
+icon grid), SwiftUI for the bars and panels. No third-party dependency.
+
+### Requirements
+
+macOS 14 (Sonoma) or newer. To build it, Xcode must be installed in
+`/Applications` for the Swift toolchain and the SwiftUI macro plugin, but it
+does not need to be selected with `xcode-select`.
+
+### Build and run
+
+```bash
+./build.sh release
+open MExplorer.app
+```
+
+The script builds with Swift Package Manager, assembles `MExplorer.app` and
+signs it ad-hoc with the sandbox entitlements. It applies two toolchain
+workarounds on its own: SwiftPM's default build system fails with the Command
+Line Tools alone, so `--build-system native` is forced; and the SwiftUI macros
+plugin ships only with Xcode, so the script points at it with `-plugin-path`.
+
+A signed build is also attached to every
+[release](https://github.com/brihx001/MExplorer/releases). It is ad-hoc signed
+and **not notarized**, so macOS quarantines the downloaded file and refuses to
+open it; clear the quarantine first:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/MExplorer.app
+```
+
+### Sandbox: read this first
+
+The application is built **sandboxed**, App Store ready, so macOS forbids it to
+read your files until you point it at a folder.
+
+On first launch it offers to grant access to the **whole disk**: accept, then
+pick the startup disk in the system panel. The permission is kept between
+launches through a security-scoped bookmark, the prompt does not come back once
+the root is granted, and a *Don't ask again* button disables it for good. It
+stays reachable from **MExplorer > Allow access to the whole disk...**, and the
+file area shows an **Allow access to this folder** button whenever a folder is
+not readable.
+
+Granting the root does not bypass TCC: folders protected by macOS (Desktop,
+Documents, Downloads, the photo library) ask for their own permission on first
+access.
+
+### What it does
+
+- **Full navigation pane**: quick access, iCloud, This Mac, mounted volumes,
+  tags, Recents, Trash. The current folder is revealed and selected in the real
+  tree. Expanded folders are watched, so a creation, deletion or rename — made
+  in the application or anywhere else — shows up without collapsing anything.
+  Removable volumes carry an eject button.
+- **Tabs**, reorderable, draggable between windows, with spring-loading when
+  you hover one while dragging files.
+- **Eight view modes**, from extra large icons to a multi-column details list
+  with sortable, resizable, reorderable columns whose widths are remembered per
+  folder.
+- **Real folder sizes** in the details view, computed in the background, one
+  folder at a time, and cached until the folder changes.
+- **Sorting, grouping, filtering**, with collapsible group headers.
+- **File operations**: cut, copy, paste, rename, duplicate, alias, compress,
+  trash, permanent deletion, undo. A name conflict offers to keep both, replace
+  or cancel, like the Finder.
+- **Rename** with F2, the context menu, the command bar, or two slow clicks on
+  the name.
+- **Finder services**: Quick Look, Get Info, tags, aliases, favourites,
+  Spotlight search, network volumes, Open With, Services, Share.
+- **Status bar**: item count, total size of the displayed items, and a fill
+  gauge for the current volume.
+- **Settings**: interface language, light/dark/system theme, hidden items, file
+  name extensions, single-click opening, folders in a new tab, confirmation of
+  permanent deletions, and the list of granted folders.
+
+### Languages and appearance
+
+The interface follows the Mac's language on first launch and can be changed in
+**Settings > General > Language** (system, French, English); the change applies
+immediately. Dates always follow the **system** format, not the application
+language, so they match what you see everywhere else on your Mac.
+
+The light/dark theme is set in **Settings > General > Theme** and defaults to
+the system setting.
+
+### Known limitations
+
+- A favourite already in the quick access list cannot be reordered by dragging.
+- No *Put Back* from the Trash: the original location is not reachable under the
+  sandbox.
+- Session restore reopens a single window.
+- Rubber-band selection exists only in the icon views.
+- Packages (`.app`, `.photoslibrary`) keep their icon instead of a Quick Look
+  thumbnail.
+- Labels provided by macOS itself (a file's kind, system panels) follow the
+  **system** language, not the application setting.
+
+### Licence
+
+MIT, see [LICENSE](LICENSE).
+
+---
+
+## En francais
+
 ## Prerequis
 
 - macOS 14 (Sonoma) ou plus recent ;
@@ -106,10 +221,11 @@ pour cela.
   dans l'application ou ailleurs, apparait dans l'arborescence sans rien
   replier. Les volumes amovibles portent un bouton d'ejection. Le disque de
   demarrage n'est liste qu'une fois, sous « Ce Mac ».
-- **Reglages** : langue de l'interface, affichage des elements masques, des
-  extensions de noms de fichiers, ouverture d'un seul clic, ouverture des
-  dossiers dans un nouvel onglet, confirmation des suppressions definitives,
-  reinitialisation des reglages d'affichage, et liste des dossiers autorises.
+- **Reglages** : langue de l'interface, theme clair/sombre/systeme, affichage
+  des elements masques, des extensions de noms de fichiers, ouverture d'un
+  seul clic, ouverture des dossiers dans un nouvel onglet, confirmation des
+  suppressions definitives, reinitialisation des reglages d'affichage, et
+  liste des dossiers autorises.
 - **Acces rapide** : une liste plate de raccourcis, sans chevron ni
   sous-arborescence (la hierarchie se deplie sous « Ce Mac »). Un dossier
   lache sur l'en-tete, ou entre deux favoris, devient un favori a la position
@@ -276,7 +392,7 @@ Deux pieges Quick Look valent d'etre notes :
   quelques demandes simultanees : elles sont mises en file, quatre a la fois,
   avec un chien de garde.
 
-## Langues
+## Langues et apparence
 
 L'interface suit la langue du Mac au premier lancement, et se change dans
 **Reglages > General > Langue** : *Langue du systeme*, *Francais* ou
@@ -295,7 +411,17 @@ Deux details valent d'etre connus :
   developpement, donc en francais meme sur un Mac en anglais.
 - Ces libelles-la suivent la langue du **systeme**, pas le reglage de
   l'application : choisir le francais sur un Mac en anglais laisse la colonne
-  Type en anglais. Les dates, elles, suivent bien le reglage.
+  Type en anglais.
+
+Les **dates** suivent elles aussi le systeme, mais deliberement : elles
+reprennent le format regle dans *Reglages systeme > Langue et region*, celui
+que vous voyez partout ailleurs sur votre Mac, quelle que soit la langue
+choisie dans l'application.
+
+Le **theme** se regle dans **Reglages > General > Theme** : *Theme du systeme*,
+*Clair* ou *Sombre*. Il s'applique immediatement a toutes les fenetres. Laisse
+sur *Theme du systeme*, l'application suit macOS, y compris si l'apparence
+bascule en cours de journee.
 
 ## Icone
 

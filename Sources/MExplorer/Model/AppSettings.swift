@@ -122,6 +122,22 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    // MARK: - Theme
+
+    /// Apparence de l'application. `system` suit le reglage de macOS.
+    @Published var theme: AppTheme = AppSettings.storedTheme {
+        didSet {
+            guard theme != oldValue else { return }
+            d.set(theme.rawValue, forKey: "theme")
+            theme.apply()
+        }
+    }
+
+    private static var storedTheme: AppTheme {
+        UserDefaults.standard.string(forKey: "theme")
+            .flatMap(AppTheme.init(rawValue:)) ?? .system
+    }
+
     private static var storedLanguage: AppLanguage {
         UserDefaults.standard.string(forKey: "language")
             .flatMap(AppLanguage.init(rawValue:)) ?? .system
