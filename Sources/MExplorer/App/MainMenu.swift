@@ -4,6 +4,26 @@ import AppKit
 /// l'Explorateur Windows quand ils ne heurtent pas une convention macOS.
 enum MainMenu {
 
+    /// Panneau standard, complete par la date et l'heure de construction :
+    /// `build.sh` les inscrit dans le bundle sous la clef MEXBuildDate.
+    static func showAboutPanel() {
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "MEXBuildDate") as? String,
+           let date = ISO8601DateFormatter().date(from: raw) {
+            let formatter = DateFormatter()
+            formatter.locale = .autoupdatingCurrent
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            let line = L("Construit le %@", formatter.string(from: date))
+            options[.credits] = NSAttributedString(
+                string: line,
+                attributes: [.font: NSFont.systemFont(ofSize: 11),
+                             .foregroundColor: NSColor.secondaryLabelColor])
+        }
+        NSApp.orderFrontStandardAboutPanel(options: options)
+    }
+
+
     private static var model: WindowModel? { WindowManager.shared.keyModel }
     private static var tab: TabState? { model?.activeTab }
 
@@ -49,7 +69,7 @@ enum MainMenu {
 
     private static func appMenu() -> NSMenuItem {
         submenu("MExplorer") { menu in
-            add(menu, L("A propos de MExplorer")) { NSApp.orderFrontStandardAboutPanel(nil) }
+            add(menu, L("A propos de MExplorer")) { Self.showAboutPanel() }
             menu.addItem(.separator())
             add(menu, L("Reglages..."), ",") { PreferencesWindowController.show() }
             menu.addItem(.separator())

@@ -20,5 +20,10 @@
     <true/>
     <key>com.apple.security.print</key>
     <true/>
+    <key>com.apple.security.temporary-exception.iokit-user-client-class</key>
+    <array>
+        <string>AppleNVMeSMARTUserClient</string>
+        <string>AppleSATLSMARTUserClient</string>
+    </array>
 </dict>
 </plist>

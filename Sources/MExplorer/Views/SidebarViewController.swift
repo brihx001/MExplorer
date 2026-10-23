@@ -438,6 +438,11 @@ final class SidebarViewController: NSViewController {
         model.eject(url)
     }
 
+    @objc private func menuShowSMART() {
+        guard let url = clickedOrSelectedNode()?.url else { return }
+        DiskHealthWindowController.show(for: url)
+    }
+
     @objc private func menuRevealInFinder() {
         guard let url = clickedOrSelectedNode()?.url else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
@@ -485,6 +490,13 @@ extension SidebarViewController: NSMenuDelegate {
 
         if node.kind == .volume, node.isEjectable {
             menu.addItem(withTitle: L("Ejecter"), action: #selector(menuEject), keyEquivalent: "")
+        }
+
+        // Disques seulement, et seulement ceux qui rendent vraiment du SMART.
+        if let url = node.url, node.kind == .volume || url.path == "/",
+           DiskHealth.isSupported(forVolumeAt: url) {
+            menu.addItem(withTitle: L("Voir les informations SMART..."),
+                         action: #selector(menuShowSMART), keyEquivalent: "")
         }
 
         if let url = node.url, !AccessManager.shared.canList(url) {

@@ -191,6 +191,40 @@ final class FileListViewController: NSViewController, FileAreaController {
 
     // MARK: - Colonnes
 
+    /// Ajuste une colonne au plus large de ses contenus, comme un double-clic
+    /// sur un separateur dans un tableur.
+    ///
+    /// Les lignes sont mesurees toutes, jusqu'a une borne : au-dela, le gain de
+    /// precision ne vaut pas l'attente, et les elements suivants sont de toute
+    /// facon hors de vue.
+    private func autoFitColumn(at index: Int) {
+        guard tableView.tableColumns.indices.contains(index) else { return }
+        let column = tableView.tableColumns[index]
+        guard let columnID = ColumnID(rawValue: column.identifier.rawValue) else { return }
+
+        let headerFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        var width = textWidth(column.title, font: headerFont) + 20   // tri + marges
+
+        let cellFont = NSFont.systemFont(ofSize: columnID == .name ? 13 : 12)
+        for row in rows.prefix(5000) {
+            guard let item = row.item else { continue }
+            var candidate = textWidth(text(for: item, column: columnID), font: cellFont) + 10
+            if columnID == .name {
+                // icone (2 + 18 + 6) puis une pastille par tag (3 + 8)
+                candidate += 26 + CGFloat(min(item.tagNames.count, 4)) * 11
+            }
+            width = max(width, candidate)
+        }
+
+        // Poser la largeur suffit a la memoriser : NSTableView emet alors
+        // columnDidResize, que l'on ecoute deja pour cela.
+        column.width = min(max(width.rounded(.up), column.minWidth), column.maxWidth)
+    }
+
+    private func textWidth(_ text: String, font: NSFont) -> CGFloat {
+        (text as NSString).size(withAttributes: [.font: font]).width
+    }
+
     /// Reecrit les en-tetes sans toucher aux colonnes : un changement de langue
     /// ne modifie pas la composition, donc `rebuildColumns` ne ferait rien.
     func refreshColumnTitles() {
@@ -238,7 +272,13 @@ final class FileListViewController: NSViewController, FileAreaController {
             tableView.addTableColumn(column)
         }
 
-        tableView.headerView = layout.showsHeader ? NSTableHeaderView() : nil
+        if layout.showsHeader {
+            let header = FileTableHeaderView()
+            header.onAutoFit = { [weak self] index in self?.autoFitColumn(at: index) }
+            tableView.headerView = header
+        } else {
+            tableView.headerView = nil
+        }
         tableView.headerView?.menu = headerMenu()
         tableView.rowHeight = 24
         appliedLayout = layout
@@ -561,6 +601,31 @@ extension FileListViewController: NSTextFieldDelegate {
 }
 
 // MARK: - Cellules
+
+/// En-tete de tableau qui ajuste une colonne au double-clic sur son separateur,
+/// comme un tableur. NSTableHeaderView n'y reagit pas de lui-meme.
+final class FileTableHeaderView: NSTableHeaderView {
+
+    var onAutoFit: ((Int) -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount == 2, let column = dividerColumn(at: event) {
+            onAutoFit?(column)
+            return
+        }
+        super.mouseDown(with: event)
+    }
+
+    /// Colonne dont le bord droit se trouve sous le pointeur, a trois points pres.
+    private func dividerColumn(at event: NSEvent) -> Int? {
+        guard let table = tableView else { return nil }
+        let point = convert(event.locationInWindow, from: nil)
+        for index in 0..<table.numberOfColumns {
+            if abs(point.x - headerRect(ofColumn: index).maxX) <= 3 { return index }
+        }
+        return nil
+    }
+}
 
 /// Cellule "Nom" : icone + libelle editable + pastilles de tags.
 final class FileNameCell: NSTableCellView {

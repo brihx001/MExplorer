@@ -42,6 +42,14 @@ else
 fi
 printf 'APPL????' > "${APP}/Contents/PkgInfo"
 
+# Date de construction, lue par la fenetre « A propos ». Elle est posee sur le
+# bundle, pas sur Packaging/Info.plist, pour que le fichier du depot ne change
+# pas a chaque compilation.
+BUILD_DATE="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+/usr/libexec/PlistBuddy -c "Add :MEXBuildDate string ${BUILD_DATE}" \
+  "${APP}/Contents/Info.plist" >/dev/null 2>&1 \
+  || /usr/libexec/PlistBuddy -c "Set :MEXBuildDate ${BUILD_DATE}" "${APP}/Contents/Info.plist"
+
 # Identite de signature.
 #
 # En ad-hoc, l'empreinte du code sert d'identite : elle change a chaque

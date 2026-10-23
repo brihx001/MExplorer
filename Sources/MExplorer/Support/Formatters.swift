@@ -30,6 +30,19 @@ enum Fmt {
         return f
     }()
 
+    /// Entier avec separateurs de milliers, au format du systeme.
+    static let number: NumberFormatter = {
+        let f = NumberFormatter()
+        f.locale = .autoupdatingCurrent
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f
+    }()
+
+    static func decimal(_ value: UInt64) -> String {
+        number.string(from: NSNumber(value: value)) ?? String(value)
+    }
+
     static func size(_ bytes: Int64?) -> String {
         guard let bytes else { return "--" }
         return byteCount.string(fromByteCount: bytes)

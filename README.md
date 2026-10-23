@@ -70,6 +70,15 @@ access.
 
 ### What it does
 
+- **SMART information** for disks that expose it: wear, temperature, spare
+  blocks, power-on hours, power cycles, unsafe shutdowns, errors, data read and
+  written, with a warning icon on out-of-range values and an explanation behind
+  each info marker. Reaching the IOKit SMART client from the sandbox needs the
+  `iokit-user-client-class` temporary exception, which the entitlements declare;
+  USB enclosures usually pass no SMART through at all, and the menu entry then
+  stays hidden.
+- **Double-click a column separator** in the details view to fit the column to
+  its widest content, as in a spreadsheet.
 - **Middle click** on a folder opens it in a **background** tab, as a browser
   does; the new tab marks itself with an accent outline for a couple of
   seconds. On a file it does nothing.
@@ -307,7 +316,9 @@ pour cela.
 - **Details multi-colonnes** : Nom, Modifie le, Type, Taille, Cree le,
   Ajoute le, Tags, Extension, Chemin. Colonnes redimensionnables, reordonnables,
   triables par clic sur l'en-tete (un second clic inverse le sens), activables
-  par clic droit sur l'en-tete. Largeurs memorisees par dossier.
+  par clic droit sur l'en-tete. Largeurs memorisees par dossier. Un
+  **double-clic sur un separateur de colonnes** l'ajuste au plus large de ses
+  contenus, comme dans un tableur.
 - **Taille reelle des dossiers** : calculee en tache de fond, un dossier a la
   fois, affichee au fur et a mesure en mode Details et memorisee tant que le
   dossier n'a pas change. Le **tri par taille s'appuie dessus** : dossiers et
@@ -364,6 +375,14 @@ pour cela.
   creation et mise a la corbeille.
 - **Volumes** : detection des montages/demontages, ejection d'un clic depuis la
   barre laterale ou par le menu contextuel.
+- **Informations SMART** : le menu contextuel d'un disque propose « Voir les
+  informations SMART... », qui ouvre une fenetre lisible — usure, temperature,
+  blocs de rechange, heures de fonctionnement, demarrages, arrets brutaux,
+  erreurs, volumes lus et ecrits. Une icone d'alerte signale les valeurs hors
+  plage, et un « i » survole explique chaque releve. L'entree n'apparait que
+  pour les disques qui rendent vraiment ces donnees.
+- **A propos** : affiche la date et l'heure de construction du binaire, posees
+  par `build.sh` dans le bundle.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
   l'index Spotlight (`kMDItemLastUsedDate`, `kMDItemFSContentChangeDate`).
   La bibliotheque personnelle est ecartee : ses caches et ses journaux
@@ -487,6 +506,30 @@ Les artefacts publies dans les *releases* restent signes en ad-hoc : un
 certificat de developpement ne vaut que pour la machine qui l'a emis, et
 Gatekeeper le refuserait ailleurs. Seuls un *Developer ID* et une notarisation
 y changeraient quelque chose.
+
+## Donnees SMART et bac a sable
+
+Le client SMART d'IOKit est ferme aux applications en bac a sable : l'ouvrir
+repond `kIOReturnNotPermitted`, et `diskutil` lance depuis l'application rend
+« Not Supported » la ou le meme appel hors bac a sable rend « Verified ».
+
+`Packaging/MExplorer.entitlements` porte donc l'exception temporaire
+`com.apple.security.temporary-exception.iokit-user-client-class`
+(`AppleNVMeSMARTUserClient`, `AppleSATLSMARTUserClient`), qui rouvre ce seul
+client. Mesure faite sur ce Mac : sans elle, aucune donnee ; avec elle, le
+journal SMART complet du disque interne.
+
+L'en-tete `<IOKit/storage/nvme/NVMeSMARTLibExternal.h>` n'etant pas expose au
+module Swift, un petit module C (`Sources/CSmart`) l'inclut et rend la lecture
+sous forme de structure plate.
+
+Deux limites tiennent au materiel, pas au code :
+
+- un boitier USB ne transmet en general pas les commandes de diagnostic au
+  disque qu'il contient : le Crucial X9 de test repond « pas de SMART », et
+  l'entree de menu n'apparait pas pour lui ;
+- les attributs exposes sont ceux du journal SMART NVMe ; un disque SATA
+  ancien n'en rend pas les memes.
 
 ## Performances
 
