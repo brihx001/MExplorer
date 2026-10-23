@@ -42,8 +42,34 @@ else
 fi
 printf 'APPL????' > "${APP}/Contents/PkgInfo"
 
-echo "==> signature ad-hoc + entitlements"
-codesign --force --sign - \
+# Identite de signature.
+#
+# En ad-hoc, l'empreinte du code sert d'identite : elle change a chaque
+# reconstruction, et macOS oublie alors toutes les autorisations de
+# confidentialite accordees (volumes amovibles, Telechargements, Bureau...).
+# L'utilisateur les redonne a chaque mise a jour.
+#
+# Signer avec un certificat stable - "Apple Development: ..." suffit - lie les
+# autorisations au certificat et non au binaire : elles survivent aux
+# reconstructions. Le certificat n'est pas publie : les artefacts de release
+# restent signes en ad-hoc.
+#
+#   MEXPLORER_SIGN_IDENTITY="Apple Development: moi@exemple.fr (XXXXXXXXXX)" ./build.sh release
+#
+# Ou, une fois pour toutes, en ecrivant cette ligne dans .signing-identity
+# (fichier local, ignore par git).
+IDENTITY="${MEXPLORER_SIGN_IDENTITY:-}"
+if [ -z "${IDENTITY}" ] && [ -f .signing-identity ]; then
+  IDENTITY="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' .signing-identity)"
+fi
+
+if [ -n "${IDENTITY}" ]; then
+  echo "==> signature + entitlements (${IDENTITY})"
+else
+  echo "==> signature ad-hoc + entitlements"
+  IDENTITY="-"
+fi
+codesign --force --sign "${IDENTITY}" \
   --entitlements Packaging/MExplorer.entitlements \
   --options runtime \
   --timestamp=none \

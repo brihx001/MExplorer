@@ -124,6 +124,29 @@ language, so they match what you see everywhere else on your Mac.
 The light/dark theme is set in **Settings > General > Theme** and defaults to
 the system setting.
 
+### Privacy permissions and signing
+
+macOS records privacy approvals (removable volumes, network volumes, Desktop,
+Documents, Downloads) against the application's **code identity**. An ad-hoc
+signature has no certificate, so that identity is the binary's own hash: it
+changes with every rebuild, and every update silently discards the approvals
+already granted — measured here, a changed build number was enough to be asked
+again for the removable volume, then the Downloads folder, then the Desktop.
+
+Signing with a stable certificate ties the approval to the certificate instead.
+An *Apple Development* certificate, free with an Apple account, is enough for
+your own Mac:
+
+```bash
+security find-identity -v -p codesigning
+echo 'Apple Development: me@example.com (XXXXXXXXXX)' > .signing-identity
+./build.sh release
+```
+
+`build.sh` reads `MEXPLORER_SIGN_IDENTITY`, falls back to the `.signing-identity`
+file (local, git-ignored), and signs ad-hoc otherwise. Released binaries stay
+ad-hoc signed: a development certificate is worthless on another Mac.
+
 ### Known limitations
 
 - A favourite already in the quick access list cannot be reordered by dragging.
@@ -429,6 +452,41 @@ Deux pieges Quick Look valent d'etre notes :
 - `QLThumbnailGenerator` abandonne silencieusement les requetes au-dela de
   quelques demandes simultanees : elles sont mises en file, quatre a la fois,
   avec un chien de garde.
+
+## Autorisations de confidentialite et signature
+
+macOS demande son accord a l'utilisateur avant qu'une application touche
+certaines zones : volumes amovibles, volumes reseau, Bureau, Documents,
+Telechargements. Ces accords sont enregistres par TCC **contre l'identite de
+code** de l'application, pas contre son chemin ni son identifiant seul.
+
+Une signature **ad-hoc** n'a pas de certificat : l'identite s'y reduit a
+l'empreinte du binaire, qui change a chaque reconstruction. Mesure faite sur
+ce Mac : apres avoir accorde l'acces au volume amovible, il a suffi de rebatir
+l'application avec un numero de build different pour que macOS redemande
+l'autorisation - celle du volume amovible, puis celle des Telechargements,
+puis celle du Bureau. Autrement dit, **chaque mise a jour efface toutes les
+autorisations deja donnees**.
+
+Signer avec un certificat stable lie l'autorisation au certificat et non au
+binaire. Un certificat *Apple Development*, gratuit avec un compte Apple,
+suffit pour son propre Mac :
+
+```bash
+security find-identity -v -p codesigning        # relever l'identite
+echo 'Apple Development: moi@exemple.fr (XXXXXXXXXX)' > .signing-identity
+./build.sh release
+```
+
+`build.sh` lit `MEXPLORER_SIGN_IDENTITY`, sinon le fichier `.signing-identity`
+(local, ignore par git), sinon signe en ad-hoc. La premiere signature demande
+le mot de passe du trousseau pour autoriser `codesign` a utiliser la clef
+privee ; repondre **Toujours autoriser** evite que la question revienne.
+
+Les artefacts publies dans les *releases* restent signes en ad-hoc : un
+certificat de developpement ne vaut que pour la machine qui l'a emis, et
+Gatekeeper le refuserait ailleurs. Seuls un *Developer ID* et une notarisation
+y changeraient quelque chose.
 
 ## Performances
 

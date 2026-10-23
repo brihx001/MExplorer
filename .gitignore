@@ -9,3 +9,6 @@ Packaging/Icon/AppIcon.iconset/
 
 # macOS
 .DS_Store
+
+# Identite de signature locale (voir build.sh)
+.signing-identity
