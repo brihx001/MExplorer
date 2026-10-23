@@ -18,7 +18,11 @@ final class IconCache {
     private init() {
         generic.countLimit = 400
         specific.countLimit = 2000
+        // Une vignette de 256 points en Retina pese environ un demi-megaoctet :
+        // 1500 d'entre elles depasseraient le demi-gigaoctet. La limite porte
+        // donc sur les octets, le nombre ne servant que de garde-fou.
         thumbnails.countLimit = 1500
+        thumbnails.totalCostLimit = 64 * 1024 * 1024
     }
 
     // MARK: - Icone immediate, jamais bloquante
@@ -157,7 +161,8 @@ final class IconCache {
             settled = true
             self.thumbActive.remove(request.key)
             if let image {
-                self.thumbnails.setObject(image, forKey: request.key as NSString)
+                self.thumbnails.setObject(image, forKey: request.key as NSString,
+                                          cost: Self.cost(of: image))
                 self.scheduleNotification()
             }
             self.pumpThumbnails()
@@ -184,6 +189,12 @@ final class IconCache {
         for side in [16, 32, 48, 64, 96, 128, 256] as [CGFloat] {
             thumbnails.removeObject(forKey: thumbKey(URL(fileURLWithPath: path), side) as NSString)
         }
+    }
+
+    /// Poids approximatif d'une image en cache : quatre octets par pixel.
+    private static func cost(of image: NSImage) -> Int {
+        guard let rep = image.representations.first else { return 0 }
+        return max(1, rep.pixelsWide * rep.pixelsHigh * 4)
     }
 
     private func thumbKey(_ url: URL, _ side: CGFloat) -> String {

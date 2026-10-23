@@ -89,7 +89,7 @@ struct DetailsPaneView: View {
             row(L("Emplacement"), item.url.deletingLastPathComponent().path)
             if !item.fileExtension.isEmpty { row(L("Extension"), item.fileExtension) }
             row(L("Autorisations"), item.isWritable ? L("Lecture et ecriture") : L("Lecture seule"))
-            if item.isUbiquitous { row("iCloud", ubiquitousLabel(item)) }
+            if item.cloudState.isUbiquitous { row("iCloud", ubiquitousLabel(item)) }
 
             if !item.tagNames.isEmpty {
                 Divider()
@@ -165,7 +165,7 @@ struct DetailsPaneView: View {
     }
 
     private func ubiquitousLabel(_ item: FileItem) -> String {
-        switch item.ubiquitousStatus {
+        switch item.cloudState.status {
         case .some(.current): return L("Telecharge")
         case .some(.downloaded): return L("Telecharge")
         case .some(.notDownloaded): return L("Non telecharge")

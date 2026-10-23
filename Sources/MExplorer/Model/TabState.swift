@@ -19,6 +19,9 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     @Published private(set) var items: [FileItem] = [] { didSet { reindex() } }
     @Published private(set) var rows: [ListRow] = []
     @Published private(set) var isLoading = false
+    /// Onglet ouvert a l'instant en arriere-plan : la fiche se met en valeur
+    /// le temps qu'on le remarque.
+    @Published private(set) var isFreshlyOpened = false
     /// Vrai tant que des tailles de dossiers restent a calculer.
     @Published private(set) var isMeasuringFolders = false
     @Published private(set) var loadError: DirectoryLoadError?
@@ -171,6 +174,15 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     }
 
     // MARK: - Chargement
+
+    func markFreshlyOpened() {
+        isFreshlyOpened = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+            self?.isFreshlyOpened = false
+        }
+    }
+
+    func clearFreshMark() { isFreshlyOpened = false }
 
     func reload() {
         load(preservingSelection: true)

@@ -101,7 +101,7 @@ private struct TabChip: View {
                 .font(.system(size: 11))
                 .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
             Text(tab.title)
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
                 .lineLimit(1)
                 .truncationMode(.tail)
             if showClose {
@@ -127,25 +127,40 @@ private struct TabChip: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(borderColor, lineWidth: isFileTarget ? 2 : 1)
+                .strokeBorder(borderColor, lineWidth: (isFileTarget || isFresh) ? 2 : 1)
         )
+        // Trait d'accent sous l'onglet actif : le repere reste lisible meme
+        // quand la fenetre n'a pas le focus et que les fonds s'aplatissent.
+        .overlay(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.accentColor)
+                .frame(height: 2)
+                .padding(.horizontal, 10)
+                .opacity(isActive ? 1 : 0)
+        }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(perform: onSelect)
         .help(tab.location.addressPath)
     }
 
+    /// Un onglet inactif entierement transparent se confondait avec la barre :
+    /// il garde un fond et un contour discrets, et l'onglet actif tranche
+    /// franchement.
     private var background: Color {
         if isFileTarget { return Color.accentColor.opacity(0.18) }
+        if isFresh { return Color.accentColor.opacity(0.14) }
         if isActive { return Color(nsColor: .controlBackgroundColor) }
-        if hovering { return Color.primary.opacity(0.06) }
-        return .clear
+        if hovering { return Color.primary.opacity(0.10) }
+        return Color.primary.opacity(0.045)
     }
 
     private var borderColor: Color {
-        if isFileTarget { return Color.accentColor }
-        return isActive ? Color.primary.opacity(0.10) : Color.clear
+        if isFileTarget || isFresh { return Color.accentColor }
+        return isActive ? Color.primary.opacity(0.28) : Color.primary.opacity(0.08)
     }
+
+    private var isFresh: Bool { tab.isFreshlyOpened && !isActive }
 }
 
 // MARK: - Depot sur un onglet

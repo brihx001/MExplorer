@@ -118,6 +118,7 @@ final class WindowModel: ObservableObject {
     func selectTab(at index: Int) {
         guard tabs.indices.contains(index) else { return }
         selectedTabIndex = index
+        tabs[index].clearFreshMark()
         observeActiveTab()
         onActiveTabChanged?(activeTab)
     }
@@ -173,11 +174,18 @@ final class WindowModel: ObservableObject {
 
     func openInNewTab(_ url: URL) { newTab(at: .folder(url), select: true) }
 
-    /// Clic molette : ouvre un dossier dans un nouvel onglet, sans rien faire
-    /// sur un fichier. Les liens et alias sont resolus comme a l'ouverture.
+    /// Clic molette : ouvre un dossier dans un nouvel onglet **en
+    /// arriere-plan**, comme un navigateur, sans rien faire sur un fichier.
+    /// Les liens et alias sont resolus comme a l'ouverture.
     func openInNewTabIfFolder(_ item: FileItem) {
         guard let url = folderTarget(of: item) else { return }
-        openInNewTab(url)
+        openInBackgroundTab(.folder(url))
+    }
+
+    /// Ouvre sans quitter l'onglet courant. Le nouvel onglet se signale
+    /// quelques secondes, sans quoi rien ne montrerait qu'il est apparu.
+    func openInBackgroundTab(_ location: Location) {
+        newTab(at: location, select: false).markFreshlyOpened()
     }
 
     func openInNewWindow(_ url: URL) {

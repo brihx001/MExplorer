@@ -70,6 +70,9 @@ access.
 
 ### What it does
 
+- **Middle click** on a folder opens it in a **background** tab, as a browser
+  does; the new tab marks itself with an accent outline for a couple of
+  seconds. On a file it does nothing.
 - **Links and aliases to a folder** behave like folders: navigating, sorting
   with the folders, *open in a new tab*. That covers the link OneDrive leaves
   in the home folder, which used to be handed over to the Finder because
@@ -217,8 +220,10 @@ pour cela.
 ### Reprises de l'Explorateur Windows 11
 
 - **Clic molette** : sur un dossier, dans la liste, la grille d'icones ou le
-  volet de navigation, il l'ouvre dans un nouvel onglet. Sur un fichier, il ne
-  fait rien.
+  volet de navigation, il l'ouvre dans un nouvel onglet **en arriere-plan**,
+  comme un navigateur. Le nouvel onglet se signale deux secondes et demie par
+  un contour d'accentuation, sans quoi rien ne montrerait qu'il est apparu.
+  Sur un fichier, le clic molette ne fait rien.
 - **Onglets** : creation, fermeture, duplication, « fermer les autres »,
   « fermer a droite », menu contextuel. Reordonnables par glisser-deposer, et
   **deplacables d'une fenetre a l'autre** : l'onglet emporte son historique et
@@ -394,6 +399,7 @@ Quatre couts mesures sur ce Mac ont dicte l'architecture :
 | --- | --- | --- |
 | `localizedName` sur un dossier protege par TCC | ~5 a 10 s par appel | `DisplayNameCache`, asynchrone et persistant |
 | `tagNames` / `labelNumber` | un `getxattr` par fichier | seconde passe apres affichage |
+| `isUbiquitousItem` / `ubiquitousItemDownloadingStatus` | 77 us par fichier, soit les deux tiers du chargement d'un dossier de 5 200 elements | lus a la demande, pour le seul element selectionne |
 | `NSWorkspace.icon(forFile:)` | LaunchServices, blocage possible | icone generique immediate, specifique en differe |
 | Contenu d'un menu SwiftUI | evalue **a chaque rendu** | `SubfolderCache`, jamais de lecture disque dans le menu |
 | Taille d'un dossier | parcours recursif complet | `FolderSizeCalculator`, un dossier a la fois, annulable |
@@ -423,6 +429,23 @@ Deux pieges Quick Look valent d'etre notes :
 - `QLThumbnailGenerator` abandonne silencieusement les requetes au-dela de
   quelques demandes simultanees : elles sont mises en file, quatre a la fois,
   avec un chien de garde.
+
+## Performances
+
+Deux mesures faites sur un dossier de 5 200 elements, avant et apres le
+degraissage du jeu de clefs de chargement :
+
+| | Avant | Apres |
+| --- | --- | --- |
+| Lecture du dossier (listing + valeurs) | 0,655 s | 0,200 s |
+| Memoire ajoutee par le dossier | 25,3 Mo | 13,7 Mo |
+
+Le gain vient de trois clefs retirees du chargement : l'etat iCloud, qui
+coutait a lui seul les deux tiers du temps et ne sert qu'au volet de details,
+et les capacites de volume, lues par fichier alors qu'elles decrivent le
+disque. S'y ajoutent les libelles de type partages entre fichiers de meme
+nature, et un cache de vignettes borne en octets (64 Mo) plutot qu'en nombre :
+1 500 vignettes Retina auraient pu depasser le demi-gigaoctet.
 
 ## Langues et apparence
 

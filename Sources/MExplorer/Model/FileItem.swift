@@ -13,11 +13,7 @@ final class FileItem: NSObject {
         .contentModificationDateKey, .creationDateKey, .addedToDirectoryDateKey,
         .contentTypeKey, .localizedTypeDescriptionKey,
         .labelNumberKey, .tagNamesKey,
-        .isWritableKey, .isReadableKey, .isExecutableKey,
-        .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey,
-        .isVolumeKey, .volumeNameKey, .volumeIsRemovableKey, .volumeIsEjectableKey,
-        .volumeTotalCapacityKey, .volumeAvailableCapacityKey,
-        .isMountTriggerKey
+        .isWritableKey, .isVolumeKey
     ]
 
     /// Jeu de clefs du chargement de dossier.
@@ -46,7 +42,6 @@ final class FileItem: NSObject {
     let isHidden: Bool
     let isWritable: Bool
     let isVolume: Bool
-    let isEjectable: Bool
     let byteSize: Int64
     let modificationDate: Date?
     let creationDate: Date?
@@ -55,10 +50,6 @@ final class FileItem: NSObject {
     let kindDescription: String
     var labelNumber: Int
     var tagNames: [String]
-    let isUbiquitous: Bool
-    let ubiquitousStatus: URLUbiquitousItemDownloadingStatus?
-    let volumeCapacity: Int64
-    let volumeAvailable: Int64
 
     /// Taille calculee recursivement pour les dossiers (nil tant que non calculee).
     var computedFolderSize: Int64?
@@ -84,20 +75,16 @@ final class FileItem: NSObject {
         self.isHidden = (v?.isHidden ?? false) || url.lastPathComponent.hasPrefix(".")
         self.isWritable = v?.isWritable ?? true
         self.isVolume = v?.isVolume ?? false
-        self.isEjectable = (v?.volumeIsEjectable ?? false) || (v?.volumeIsRemovable ?? false)
         self.byteSize = Int64(v?.totalFileSize ?? v?.fileSize ?? 0)
         self.modificationDate = v?.contentModificationDate
         self.creationDate = v?.creationDate
         self.addedDate = v?.addedToDirectoryDate
         self.contentType = v?.contentType
-        self.kindDescription = v?.localizedTypeDescription
-            ?? (v?.isDirectory == true ? L("Dossier") : L("Document"))
+        self.kindDescription = Self.sharedKind(
+            v?.localizedTypeDescription
+                ?? (v?.isDirectory == true ? L("Dossier") : L("Document")))
         self.labelNumber = v?.labelNumber ?? 0
         self.tagNames = v?.tagNames ?? []
-        self.isUbiquitous = v?.isUbiquitousItem ?? false
-        self.ubiquitousStatus = v?.ubiquitousItemDownloadingStatus
-        self.volumeCapacity = Int64(v?.volumeTotalCapacity ?? 0)
-        self.volumeAvailable = Int64(v?.volumeAvailableCapacity ?? 0)
         super.init()
     }
 
@@ -108,6 +95,29 @@ final class FileItem: NSObject {
 
     /// Un dossier "navigable" : un paquet (.app, .rtfd) se comporte comme un fichier au double-clic.
     var isNavigableContainer: Bool { (isDirectory || linksToDirectory) && !isPackage }
+
+    /// Les milliers de fichiers d'un meme type partagent le meme libelle
+    /// ("Document texte") : le systeme en rend une chaine neuve a chaque
+    /// appel, on n'en garde qu'une.
+    private static var kindPool: [String: String] = [:]
+    private static let kindLock = NSLock()
+
+    private static func sharedKind(_ kind: String) -> String {
+        kindLock.lock()
+        defer { kindLock.unlock() }
+        if let existing = kindPool[kind] { return existing }
+        if kindPool.count < 512 { kindPool[kind] = kind }
+        return kind
+    }
+
+    /// Etat iCloud, lu a la demande : il ne sert qu'au volet de details, pour
+    /// l'element selectionne. Demande au listing, il coutait a lui seul les
+    /// deux tiers du temps de chargement d'un grand dossier.
+    var cloudState: (isUbiquitous: Bool, status: URLUbiquitousItemDownloadingStatus?) {
+        let v = try? url.resourceValues(forKeys: [.isUbiquitousItemKey,
+                                                  .ubiquitousItemDownloadingStatusKey])
+        return (v?.isUbiquitousItem ?? false, v?.ubiquitousItemDownloadingStatus)
+    }
 
     /// Vrai si demander une vignette Quick Look a un sens.
     ///
