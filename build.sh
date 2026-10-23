@@ -63,7 +63,9 @@ if [ -z "${IDENTITY}" ] && [ -f .signing-identity ]; then
   IDENTITY="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' .signing-identity)"
 fi
 
-if [ -n "${IDENTITY}" ]; then
+# MEXPLORER_SIGN_IDENTITY="-" force l'ad-hoc malgre un .signing-identity
+# present : c'est ainsi que sont bati les artefacts publies.
+if [ -n "${IDENTITY}" ] && [ "${IDENTITY}" != "-" ]; then
   echo "==> signature + entitlements (${IDENTITY})"
 else
   echo "==> signature ad-hoc + entitlements"
