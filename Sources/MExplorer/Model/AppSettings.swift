@@ -80,6 +80,17 @@ final class AppSettings: ObservableObject {
         NotificationCenter.default.post(name: Self.favoritesChanged, object: nil)
     }
 
+    /// Les Applications ont rejoint les favoris par defaut apres coup : une
+    /// liste deja enregistree ne les aurait jamais vues. On les y ajoute une
+    /// seule fois, juste apres le dossier personnel.
+    func addApplicationsFavoriteOnce() {
+        let key = "didAddApplicationsFavorite"
+        guard !d.bool(forKey: key) else { return }
+        d.set(true, forKey: key)
+        guard d.stringArray(forKey: "favoritePaths") != nil else { return }
+        addFavorite(SidebarCatalog.applications, at: 1)
+    }
+
     func removeFavorite(_ url: URL) {
         favoritePaths = favoritePaths.filter { $0 != url.path }
         NotificationCenter.default.post(name: Self.favoritesChanged, object: nil)

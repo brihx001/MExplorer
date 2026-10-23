@@ -182,14 +182,13 @@ final class WindowModel: ObservableObject {
     /// Double-clic / Entree : ouvre les dossiers dans l'onglet, lance les fichiers.
     func activate(_ items: [FileItem]) {
         guard !items.isEmpty else { return }
-        if items.count == 1, let single = items.first, single.isNavigableContainer {
-            let url = resolveIfAlias(single)
+        if items.count == 1, let single = items.first, let url = folderTarget(of: single) {
             if AppSettings.shared.openFoldersInNewTab { openInNewTab(url) } else { open(url) }
             return
         }
         for item in items {
-            if item.isNavigableContainer {
-                openInNewTab(resolveIfAlias(item))
+            if let folder = folderTarget(of: item) {
+                openInNewTab(folder)
             } else {
                 NSWorkspace.shared.open(item.url)
             }
@@ -200,6 +199,18 @@ final class WindowModel: ObservableObject {
         guard item.isAliasFile || item.isSymbolicLink else { return item.url }
         if let resolved = try? URL(resolvingAliasFileAt: item.url, options: [.withoutUI]) { return resolved }
         return item.url.resolvingSymlinksInPath()
+    }
+
+    /// Dossier a ouvrir pour cet element, en resolvant alias et liens.
+    /// nil si ce n'en est pas un : l'element part alors au Finder.
+    private func folderTarget(of item: FileItem) -> URL? {
+        if item.isNavigableContainer { return resolveIfAlias(item) }
+        guard item.isAliasFile || item.isSymbolicLink else { return nil }
+        let resolved = resolveIfAlias(item)
+        guard resolved != item.url,
+              let v = try? resolved.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
+        else { return nil }
+        return (v.isDirectory == true && v.isPackage != true) ? resolved : nil
     }
 
     // MARK: - Recherche

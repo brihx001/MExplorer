@@ -70,6 +70,12 @@ access.
 
 ### What it does
 
+- **Links and aliases to a folder** behave like folders: navigating, sorting
+  with the folders, *open in a new tab*. That covers the link OneDrive leaves
+  in the home folder, which used to be handed over to the Finder because
+  `isDirectory` describes the link, not its target. The navigation tree still
+  expands real folders only, so a link pointing at an ancestor cannot be
+  expanded forever.
 - **Full navigation pane**: quick access, iCloud, This Mac, mounted volumes,
   tags, Recents, Trash. The current folder is revealed and selected in the real
   tree. Expanded folders are watched, so a creation, deletion or rename — made
@@ -233,6 +239,13 @@ pour cela.
   seul clic, ouverture des dossiers dans un nouvel onglet, confirmation des
   suppressions definitives, reinitialisation des reglages d'affichage, et
   liste des dossiers autorises.
+- **Liens et alias vers un dossier** : un lien symbolique ou un alias dont la
+  cible est un dossier se comporte comme un dossier (navigation, tri avec les
+  dossiers, « ouvrir dans un nouvel onglet »). C'est le cas du lien que
+  OneDrive pose dans le dossier personnel : sans cela il partait au Finder,
+  `isDirectory` decrivant le lien et non sa cible. L'arborescence laterale,
+  elle, ne deplie que les vrais dossiers, pour qu'un lien vers un ancetre ne
+  puisse pas s'ouvrir indefiniment.
 - **Acces rapide** : une liste plate de raccourcis, sans chevron ni
   sous-arborescence (la hierarchie se deplie sous « Ce Mac »). Un dossier
   lache sur l'en-tete, ou entre deux favoris, devient un favori a la position

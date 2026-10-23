@@ -37,7 +37,7 @@ enum SidebarCatalog {
 
     /// Dossiers "Acces rapide" par defaut, dans l'ordre de Windows 11.
     static var quickAccessDefaults: [URL] {
-        var urls: [URL] = [home]
+        var urls: [URL] = [home, applications]
         for d: FileManager.SearchPathDirectory in [.desktopDirectory, .downloadsDirectory,
                                                    .documentDirectory, .picturesDirectory,
                                                    .musicDirectory, .moviesDirectory] {

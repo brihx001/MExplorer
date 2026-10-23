@@ -41,6 +41,8 @@ final class FileItem: NSObject {
     let isApplication: Bool
     let isSymbolicLink: Bool
     let isAliasFile: Bool
+    /// Lien symbolique dont la cible est un dossier.
+    let linksToDirectory: Bool
     let isHidden: Bool
     let isWritable: Bool
     let isVolume: Bool
@@ -71,6 +73,14 @@ final class FileItem: NSObject {
         self.isApplication = v?.isApplication ?? false
         self.isSymbolicLink = v?.isSymbolicLink ?? false
         self.isAliasFile = v?.isAliasFile ?? false
+        // `isDirectory` decrit le lien lui-meme, pas sa cible : sans cette
+        // resolution, un lien vers un dossier (celui que OneDrive pose dans le
+        // dossier personnel) n'etait pas navigable. Un lien se resout d'un
+        // simple appel systeme, contrairement a un alias Finder dont la lecture
+        // du signet peut bloquer : celui-la n'est resolu qu'a l'ouverture.
+        self.linksToDirectory = (v?.isSymbolicLink ?? false)
+            && (try? url.resolvingSymlinksInPath()
+                .resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
         self.isHidden = (v?.isHidden ?? false) || url.lastPathComponent.hasPrefix(".")
         self.isWritable = v?.isWritable ?? true
         self.isVolume = v?.isVolume ?? false
@@ -97,7 +107,7 @@ final class FileItem: NSObject {
     }
 
     /// Un dossier "navigable" : un paquet (.app, .rtfd) se comporte comme un fichier au double-clic.
-    var isNavigableContainer: Bool { isDirectory && !isPackage }
+    var isNavigableContainer: Bool { (isDirectory || linksToDirectory) && !isPackage }
 
     /// Vrai si demander une vignette Quick Look a un sens.
     ///
