@@ -81,6 +81,10 @@ final class FileListViewController: NSViewController, FileAreaController {
         tableView.onSlowClick = { [weak self] row, column in
             self?.scheduleSlowRename(row: row, column: column)
         }
+        tableView.onMiddleClick = { [weak self] row in
+            guard let self, let item = self.rows[safe: row]?.item else { return }
+            self.model.openInNewTabIfFolder(item)
+        }
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(columnDidResize(_:)),

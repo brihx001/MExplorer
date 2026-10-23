@@ -5,7 +5,7 @@ import AppKit
 final class SidebarViewController: NSViewController {
 
     private let model: WindowModel
-    private let outlineView = NSOutlineView()
+    private let outlineView = SidebarOutlineView()
     private let scrollView = NSScrollView()
     private var roots: [SidebarNode] = []
     private var observers: [NSObjectProtocol] = []
@@ -44,6 +44,12 @@ final class SidebarViewController: NSViewController {
         outlineView.doubleAction = #selector(doubleClicked)
         outlineView.menu = buildMenu()
         outlineView.registerForDraggedTypes([.fileURL, .string])
+        outlineView.onMiddleClick = { [weak self] row in
+            guard let self,
+                  let node = self.outlineView.item(atRow: row) as? SidebarNode,
+                  let location = node.location, !node.isHeader else { return }
+            self.model.newTab(at: location)
+        }
         outlineView.setDraggingSourceOperationMask([.copy, .move, .link], forLocal: false)
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("main"))
@@ -646,6 +652,19 @@ extension SidebarViewController: NSOutlineViewDelegate {
 
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
         ((item as? SidebarNode)?.isHeader ?? false) ? 22 : 24
+    }
+}
+
+/// NSOutlineView qui transmet le clic molette : comme dans la zone de
+/// fichiers, il ouvre l'element vise dans un nouvel onglet.
+final class SidebarOutlineView: NSOutlineView {
+
+    var onMiddleClick: ((Int) -> Void)?
+
+    override func otherMouseUp(with event: NSEvent) {
+        guard event.buttonNumber == 2 else { super.otherMouseUp(with: event); return }
+        let row = self.row(at: convert(event.locationInWindow, from: nil))
+        if row >= 0 { onMiddleClick?(row) }
     }
 }
 

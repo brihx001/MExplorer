@@ -82,7 +82,9 @@ access.
   in the application or anywhere else — shows up without collapsing anything.
   Removable volumes carry an eject button.
 - **Tabs**, reorderable, draggable between windows, with spring-loading when
-  you hover one while dragging files.
+  you hover one while dragging files. A **middle click** on a folder — in the
+  list, the icon grid or the navigation pane — opens it in a new tab; on a file
+  it does nothing.
 - **Eight view modes**, from extra large icons to a multi-column details list
   with sortable, resizable, reorderable columns whose widths are remembered per
   folder.
@@ -214,6 +216,9 @@ pour cela.
 
 ### Reprises de l'Explorateur Windows 11
 
+- **Clic molette** : sur un dossier, dans la liste, la grille d'icones ou le
+  volet de navigation, il l'ouvre dans un nouvel onglet. Sur un fichier, il ne
+  fait rien.
 - **Onglets** : creation, fermeture, duplication, « fermer les autres »,
   « fermer a droite », menu contextuel. Reordonnables par glisser-deposer, et
   **deplacables d'une fenetre a l'autre** : l'onglet emporte son historique et

@@ -173,6 +173,13 @@ final class WindowModel: ObservableObject {
 
     func openInNewTab(_ url: URL) { newTab(at: .folder(url), select: true) }
 
+    /// Clic molette : ouvre un dossier dans un nouvel onglet, sans rien faire
+    /// sur un fichier. Les liens et alias sont resolus comme a l'ouverture.
+    func openInNewTabIfFolder(_ item: FileItem) {
+        guard let url = folderTarget(of: item) else { return }
+        openInNewTab(url)
+    }
+
     func openInNewWindow(_ url: URL) {
         WindowManager.shared.openWindow(at: .folder(url))
     }

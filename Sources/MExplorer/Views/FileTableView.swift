@@ -12,6 +12,8 @@ final class FileTableView: NSTableView {
     var onSlowClick: ((Int, Int) -> Void)?
     /// Tout le reste annule un renommage en attente.
     var onInterrupt: (() -> Void)?
+    /// Clic molette sur une ligne : ouverture dans un nouvel onglet.
+    var onMiddleClick: ((Int) -> Void)?
 
     override func keyDown(with event: NSEvent) {
         onInterrupt?()
@@ -40,6 +42,14 @@ final class FileTableView: NSTableView {
               SlowClickRenamer.qualifies(event: event, wasAloneSelected: aloneBefore, mouseOrigin: origin),
               selectedRowIndexes.count == 1, selectedRowIndexes.contains(row) else { return }
         onSlowClick?(row, column)
+    }
+
+    /// Bouton du milieu (molette) sur une ligne.
+    override func otherMouseUp(with event: NSEvent) {
+        guard event.buttonNumber == 2 else { super.otherMouseUp(with: event); return }
+        onInterrupt?()
+        let row = self.row(at: convert(event.locationInWindow, from: nil))
+        if row >= 0 { onMiddleClick?(row) }
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {

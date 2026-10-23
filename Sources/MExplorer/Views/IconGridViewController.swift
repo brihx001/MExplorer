@@ -53,6 +53,11 @@ final class IconGridViewController: NSViewController, FileAreaController {
         collectionView.onSlowClick = { [weak self] path, point in
             self?.scheduleSlowRename(at: path, windowPoint: point)
         }
+        collectionView.onMiddleClick = { [weak self] path in
+            guard let self,
+                  let item = self.sections[safe: path.section]?.items[safe: path.item] else { return }
+            self.model.openInNewTabIfFolder(item)
+        }
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(doubleClicked(_:)))
         click.numberOfClicksRequired = 2
@@ -350,6 +355,16 @@ final class FileCollectionView: NSCollectionView {
     /// renommage par deux clics lents (element, point en coordonnees fenetre).
     var onSlowClick: ((IndexPath, NSPoint) -> Void)?
     var onInterrupt: (() -> Void)?
+    /// Clic molette sur un element : ouverture dans un nouvel onglet.
+    var onMiddleClick: ((IndexPath) -> Void)?
+
+    override func otherMouseUp(with event: NSEvent) {
+        guard event.buttonNumber == 2 else { super.otherMouseUp(with: event); return }
+        onInterrupt?()
+        if let path = indexPathForItem(at: convert(event.locationInWindow, from: nil)) {
+            onMiddleClick?(path)
+        }
+    }
 
     override func keyDown(with event: NSEvent) {
         onInterrupt?()
