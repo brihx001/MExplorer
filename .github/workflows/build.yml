@@ -11,7 +11,7 @@ jobs:
     name: Compilation macOS
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Versions de la toolchain
         run: |
