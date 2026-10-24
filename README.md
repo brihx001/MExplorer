@@ -80,6 +80,13 @@ access.
   `iokit-user-client-class` temporary exception, which the entitlements declare;
   USB enclosures usually pass no SMART through at all, and the menu entry then
   stays hidden.
+- **Media information** for memory cards, which return no SMART at all: SMART
+  is an ATA and NVMe command set, and the SD standard does not adopt it. A
+  card's CID and CSD registers hold an identity, a capacity and speed classes,
+  never a state of wear. The same window therefore shows what the card does
+  publish — maker, revision, serial number, manufacture date, speed class,
+  capacity, write-protection latch — under a line that says plainly why no
+  health reading follows.
 - **Double-click a column separator** in the details view to fit the column to
   its widest content, as in a spreadsheet.
 - **Middle click** on a folder opens it in a **background** tab, as a browser
@@ -384,6 +391,11 @@ pour cela.
   erreurs, volumes lus et ecrits. Une icone d'alerte signale les valeurs hors
   plage, et un « i » survole explique chaque releve. L'entree n'apparait que
   pour les disques qui rendent vraiment ces donnees.
+- **Informations du support** : pour une carte memoire, le menu propose « Voir
+  les informations du support... ». Une carte ne rend aucune donnee SMART, et
+  la fenetre affiche a la place ce qu'elle publie sur elle-meme : fabricant,
+  revision, numero de serie, date de fabrication, classe de vitesse, capacite,
+  protection en ecriture.
 - **A propos** : affiche la date et l'heure de construction du binaire, posees
   par `build.sh` dans le bundle.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
@@ -545,6 +557,31 @@ zero.
 Une limite tient au materiel : un boitier USB ne transmet pas toujours les
 commandes de diagnostic au disque qu'il contient. Le Crucial X9 de test est
 dans ce cas, et l'entree de menu n'apparait pas pour lui.
+
+### Cartes memoire
+
+Une carte SD n'a pas de SMART, et n'en aura pas : SMART est un jeu de commandes
+ATA (T13) et NVMe, que la norme de la SD Association ne reprend pas. Une carte
+expose ses registres CID et CSD — identite, capacite, classes de vitesse — mais
+aucun attribut de sante : ni heures de service, ni cycles d'ecriture, ni blocs
+de rechange. Les commandes vendeur qui, sur certaines cartes industrielles,
+rendent une estimation d'usure passent par CMD56, que macOS n'ouvre a aucune
+API publique. L'eMMC, lui, porte bien un champ d'usure normalise dans son
+`EXT_CSD` ; ce n'est pas du SMART non plus, et le SD ne l'a pas.
+
+MExplorer reconnait une carte a son bus (« Secure Digital »), au dictionnaire
+`Card Characteristics` que publie le pilote du lecteur, ou a la classe
+`IOSDHCIBlockDevice`. Il affiche alors l'identite de la carte et la capacite et
+le verrou d'ecriture lus sur son objet `IOMedia`, sous une phrase qui dit
+pourquoi aucun releve de sante ne suit. Les cles du dictionnaire dependant du
+lecteur, celles qui ne sont pas reconnues sont publiees telles quelles plutot
+que perdues.
+
+Ce chemin n'a pas pu etre eprouve sur une vraie carte : le Mac de
+developpement est un MacBook Pro 13" M1, sans lecteur SD, et aucun lecteur USB
+n'etait disponible. Il a ete verifie en forcant le chemin « carte » sur un
+disque externe : fenetre, tableau, infobulles et repli sur les cles inconnues
+se comportent comme prevu.
 
 ## Performances
 

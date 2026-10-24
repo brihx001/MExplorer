@@ -492,11 +492,19 @@ extension SidebarViewController: NSMenuDelegate {
             menu.addItem(withTitle: L("Ejecter"), action: #selector(menuEject), keyEquivalent: "")
         }
 
-        // Disques seulement, et seulement ceux qui rendent vraiment du SMART.
-        if let url = node.url, node.kind == .volume || url.path == "/",
-           DiskHealth.isSupported(forVolumeAt: url) {
-            menu.addItem(withTitle: L("Voir les informations SMART..."),
-                         action: #selector(menuShowSMART), keyEquivalent: "")
+        // Disques seulement : le SMART pour ceux qui en rendent, l'identite
+        // publiee pour les cartes memoire, qui n'en rendent jamais.
+        if let url = node.url, node.kind == .volume || url.path == "/" {
+            switch DiskHealth.report(forVolumeAt: url) {
+            case .smart:
+                menu.addItem(withTitle: L("Voir les informations SMART..."),
+                             action: #selector(menuShowSMART), keyEquivalent: "")
+            case .media:
+                menu.addItem(withTitle: L("Voir les informations du support..."),
+                             action: #selector(menuShowSMART), keyEquivalent: "")
+            case .none:
+                break
+            }
         }
 
         if let url = node.url, !AccessManager.shared.canList(url) {

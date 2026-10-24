@@ -27,7 +27,9 @@ final class DiskHealthWindowController: NSWindowController {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
                               styleMask: [.titled, .closable, .resizable],
                               backing: .buffered, defer: false)
-        window.title = L("Informations SMART")
+        // Parler de SMART devant une carte memoire serait un contresens.
+        let isCardOnly = (health?.isCard ?? false) && !(health?.hasSMART ?? false)
+        window.title = isCardOnly ? L("Informations du support") : L("Informations SMART")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: DiskHealthView(health: health, volumeName: title))
         window.center()
@@ -58,9 +60,13 @@ private struct DiskHealthView: View {
                     verdict(health)
                     if !health.criticalWarnings.isEmpty { warnings(health) }
                     Divider()
-                    measures(health)
+                    table(health.measures)
                 } else {
                     unavailable
+                    if let health, !health.identity.isEmpty {
+                        Divider()
+                        table(health.identity)
+                    }
                 }
             }
             .padding(18)
@@ -71,7 +77,7 @@ private struct DiskHealthView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: (health?.isInternal ?? true) ? "internaldrive" : "externaldrive")
+            Image(systemName: icon)
                 .font(.system(size: 26))
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
@@ -82,6 +88,11 @@ private struct DiskHealthView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var icon: String {
+        if health?.isCard == true { return "sdcard" }
+        return (health?.isInternal ?? true) ? "internaldrive" : "externaldrive"
     }
 
     private var subtitle: String {
@@ -121,9 +132,9 @@ private struct DiskHealthView: View {
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.red.opacity(0.10)))
     }
 
-    private func measures(_ health: DiskHealth) -> some View {
+    private func table(_ rows: [DiskHealth.Measure]) -> some View {
         VStack(spacing: 0) {
-            ForEach(Array(health.measures.enumerated()), id: \.element.id) { index, measure in
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, measure in
                 HStack(spacing: 8) {
                     Text(measure.label)
                         .font(.system(size: 12))

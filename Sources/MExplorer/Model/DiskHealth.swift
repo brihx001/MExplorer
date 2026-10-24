@@ -30,8 +30,17 @@ struct DiskHealth {
     let ata: MEXATASMART?
     /// Raison de l'absence de donnees SMART, le cas echeant.
     let unavailableReason: String?
+    /// Ce que le support publie sur lui-meme. Pour une carte memoire, c'est
+    /// tout ce qui existe : SMART est un jeu de commandes ATA et NVMe, que la
+    /// norme SD ne reprend pas.
+    let identity: [Measure]
+    /// Vrai si le support est une carte memoire (SD, SDHC, SDXC).
+    let isCard: Bool
 
     var hasSMART: Bool { smart != nil || ata != nil }
+
+    /// Ce que la fenetre a a montrer pour un support donne.
+    enum Report { case none, smart, media }
 
     // MARK: - Lecture
 
@@ -41,16 +50,19 @@ struct DiskHealth {
         guard let service = service(forBSDName: device) else {
             return DiskHealth(deviceName: device, interconnect: "", isInternal: false,
                               bsdName: device, smart: nil, ata: nil,
-                              unavailableReason: L("Le peripherique n'a pas ete trouve dans le registre du systeme."))
+                              unavailableReason: L("Le peripherique n'a pas ete trouve dans le registre du systeme."),
+                              identity: [], isCard: false)
         }
         defer { IOObjectRelease(service) }
 
         var name = device
         var interconnect = ""
         var isInternal = false
+        var properties: [String: Any] = [:]
         var props: Unmanaged<CFMutableDictionary>?
         if IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
            let dict = props?.takeRetainedValue() as? [String: Any] {
+            properties = dict
             if let characteristics = dict["Device Characteristics"] as? [String: Any],
                let product = characteristics["Product Name"] as? String {
                 name = product.trimmingCharacters(in: .whitespaces)
@@ -61,6 +73,12 @@ struct DiskHealth {
             }
         }
 
+        // Une carte memoire se reconnait a son bus (« Secure Digital ») ou au
+        // dictionnaire que le pilote du lecteur lui consacre.
+        let isCard = interconnect.localizedCaseInsensitiveContains("Secure Digital")
+            || properties["Card Characteristics"] != nil
+            || IOObjectConformsTo(service, "IOSDHCIBlockDevice") != 0
+
         // Deux dialectes : le journal NVMe des disques internes recents, la
         // table d'attributs ATA des disques SATA et des boitiers USB qui
         // traduisent les commandes (SAT). On essaie l'un puis l'autre.
@@ -69,28 +87,160 @@ struct DiskHealth {
         var ataData = MEXATASMART()
         let hasATA = hasNVMe ? false : mex_read_ata_smart(service, &ataData)
 
+        let reason: String?
+        if hasNVMe || hasATA {
+            reason = nil
+        } else if isCard {
+            reason = L("Une carte memoire ne rend pas de donnees SMART : SMART est un jeu de commandes ATA et NVMe, que la norme SD ne reprend pas. Voici ce que la carte publie sur elle-meme.")
+        } else {
+            reason = L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent.")
+        }
+
         return DiskHealth(
             deviceName: name,
-            interconnect: interconnect,
+            interconnect: (isCard && interconnect.isEmpty) ? L("Carte memoire") : interconnect,
             isInternal: isInternal,
             bsdName: device,
             smart: hasNVMe ? nvme : nil,
             ata: hasATA ? ataData : nil,
-            unavailableReason: (hasNVMe || hasATA) ? nil : L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent."))
+            unavailableReason: reason,
+            identity: identityMeasures(device: properties, bsdName: device, isCard: isCard),
+            isCard: isCard)
     }
 
-    /// Vrai si le disque qui porte ce volume rend effectivement des donnees
-    /// SMART. Le resultat est retenu par disque : l'entree de menu est evaluee
-    /// a chaque ouverture du menu contextuel, et la lecture, bien que breve,
-    /// n'a pas a etre refaite.
-    private static var supportCache: [String: Bool] = [:]
+    // MARK: - Identite du support
 
-    static func isSupported(forVolumeAt url: URL) -> Bool {
-        guard let device = wholeDiskName(for: url) else { return false }
+    /// Ce qu'une carte memoire sait dire d'elle-meme.
+    ///
+    /// Ses registres CID et CSD portent une identite, une capacite et des
+    /// classes de vitesse, jamais un etat d'usure : ni heures de service, ni
+    /// cycles d'ecriture, ni blocs de rechange. La composition exacte du
+    /// dictionnaire depend du lecteur, d'ou le repli qui publie les cles
+    /// inconnues plutot que de les perdre.
+    private static func identityMeasures(device: [String: Any], bsdName: String, isCard: Bool) -> [Measure] {
+        guard isCard else { return [] }
+        let media = mediaProperties(forBSDName: bsdName)
+        let characteristics = device["Device Characteristics"] as? [String: Any] ?? [:]
+        var card = device["Card Characteristics"] as? [String: Any] ?? [:]
+        var list: [Measure] = []
+
+        func string(_ keys: [String], in dicts: [[String: Any]]) -> String? {
+            for dict in dicts {
+                for key in keys {
+                    let text: String
+                    if let value = dict[key] as? String { text = value }
+                    else if let value = dict[key] as? NSNumber { text = value.stringValue }
+                    else { continue }
+                    let trimmed = text.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty { return trimmed }
+                }
+            }
+            return nil
+        }
+        /// Lit une valeur et retire la cle du lot, pour que le repli ne la
+        /// republie pas sous son nom brut.
+        func take(_ keys: [String]) -> String? {
+            let found = string(keys, in: [card, characteristics])
+            keys.forEach { card.removeValue(forKey: $0) }
+            return found
+        }
+
+        list.append(Measure(
+            label: L("Type de support"),
+            value: L("Carte memoire (Secure Digital)"),
+            isAbnormal: false,
+            explanation: L("Les cartes SD suivent la norme de la SD Association. Elle decrit une identite, une capacite et des classes de vitesse, mais aucun attribut de sante : SMART n'existe pas sur ce bus.")))
+
+        if let vendor = take(["Manufacturer", "Manufacturer ID", "Vendor Name", "OEM ID", "OEM/Application ID"]) {
+            list.append(Measure(
+                label: L("Fabricant"),
+                value: vendor,
+                isAbnormal: false,
+                explanation: L("Identifiant du fabricant inscrit dans le registre CID de la carte, fige a la fabrication.")))
+        }
+        if let revision = take(["Product Revision", "Product Revision Level"]) {
+            list.append(Measure(
+                label: L("Revision"),
+                value: revision,
+                isAbnormal: false,
+                explanation: L("Version du produit declaree par la carte.")))
+        }
+        if let serial = take(["Serial Number", "Card Serial Number"]) {
+            list.append(Measure(
+                label: L("Numero de serie"),
+                value: serial,
+                isAbnormal: false,
+                explanation: L("Numero unique inscrit a la fabrication. Il distingue deux cartes de meme modele.")))
+        }
+        if let date = take(["Manufacture Date", "Manufacturing Date"]) {
+            list.append(Measure(
+                label: L("Date de fabrication"),
+                value: date,
+                isAbnormal: false,
+                explanation: L("Mois et annee inscrits dans le registre CID. C'est le seul indice d'age qu'une carte fournit : elle ne compte ni ses heures de service ni ses cycles d'ecriture.")))
+        }
+        if let speed = take(["Speed Class", "Card Speed", "Maximum Transfer Rate"]) {
+            list.append(Measure(
+                label: L("Classe de vitesse"),
+                value: speed,
+                isAbnormal: false,
+                explanation: L("Debit minimal garanti par le fabricant, utile pour la video. Il ne dit rien de l'etat de la carte.")))
+        }
+        if let size = media["Size"] as? NSNumber, size.int64Value > 0 {
+            list.append(Measure(
+                label: L("Capacite"),
+                value: Fmt.size(size.int64Value),
+                isAbnormal: false,
+                explanation: L("Taille totale du support, telle que le controleur la declare.")))
+        }
+        if let writable = media["Writable"] as? Bool {
+            list.append(Measure(
+                label: L("Protection en ecriture"),
+                value: writable ? L("Desactivee") : L("Activee"),
+                isAbnormal: false,
+                explanation: L("Les cartes SD pleine taille portent un loquet lateral. Verrouille, il rend la carte accessible en lecture seule ; c'est le lecteur, et non la carte, qui applique la regle.")))
+        }
+
+        for key in card.keys.sorted() {
+            guard let value = string([key], in: [card]) else { continue }
+            list.append(Measure(
+                label: key,
+                value: value,
+                isAbnormal: false,
+                explanation: L("Valeur publiee telle quelle par le pilote du lecteur de cartes.")))
+        }
+        return list
+    }
+
+    /// Proprietes de l'objet IOMedia du disque entier : capacite et verrou
+    /// d'ecriture, que le peripherique ne porte pas lui-meme.
+    private static func mediaProperties(forBSDName name: String) -> [String: Any] {
+        guard let matching = IOBSDNameMatching(kIOMainPortDefault, 0, name) else { return [:] }
+        let media = IOServiceGetMatchingService(kIOMainPortDefault, matching)
+        guard media != IO_OBJECT_NULL else { return [:] }
+        defer { IOObjectRelease(media) }
+        var props: Unmanaged<CFMutableDictionary>?
+        guard IORegistryEntryCreateCFProperties(media, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
+              let dict = props?.takeRetainedValue() as? [String: Any] else { return [:] }
+        return dict
+    }
+
+    /// Ce que ce volume a a montrer : du SMART, l'identite d'une carte
+    /// memoire, ou rien. Le resultat est retenu par disque : l'entree de menu
+    /// est evaluee a chaque ouverture du menu contextuel, et la lecture, bien
+    /// que breve, n'a pas a etre refaite.
+    private static var supportCache: [String: Report] = [:]
+
+    static func report(forVolumeAt url: URL) -> Report {
+        guard let device = wholeDiskName(for: url) else { return .none }
         if let known = supportCache[device] { return known }
-        let supported = read(forVolumeAt: url)?.hasSMART ?? false
-        supportCache[device] = supported
-        return supported
+        let health = read(forVolumeAt: url)
+        let report: Report
+        if health?.hasSMART == true { report = .smart }
+        else if health?.identity.isEmpty == false { report = .media }
+        else { report = .none }
+        supportCache[device] = report
+        return report
     }
 
     /// `/Volumes/X` -> `disk0`, en remontant de la tranche au disque entier.
