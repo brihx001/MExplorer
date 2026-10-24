@@ -13,8 +13,8 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.5.3](https://github.com/brihx001/MExplorer/releases/tag/v0.5.3)**
-— a maintenance release; 0.5.2 brought memory-card information to the SMART
+**Latest release: [v0.5.4](https://github.com/brihx001/MExplorer/releases/tag/v0.5.4)**
+— documentation release; 0.5.2 brought memory-card information to the SMART
 window.
 
 ## Requirements
