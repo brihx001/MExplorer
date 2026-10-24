@@ -23,11 +23,15 @@ struct DiskHealth {
     let interconnect: String
     let isInternal: Bool
     let bsdName: String
+    /// Journal NVMe, pour les disques internes des Mac recents.
     let smart: MEXNVMeSMART?
+    /// Table d'attributs ATA, pour les disques SATA et les boitiers USB qui
+    /// traduisent les commandes ATA.
+    let ata: MEXATASMART?
     /// Raison de l'absence de donnees SMART, le cas echeant.
     let unavailableReason: String?
 
-    var hasSMART: Bool { smart != nil }
+    var hasSMART: Bool { smart != nil || ata != nil }
 
     // MARK: - Lecture
 
@@ -36,7 +40,7 @@ struct DiskHealth {
         guard let device = wholeDiskName(for: url) else { return nil }
         guard let service = service(forBSDName: device) else {
             return DiskHealth(deviceName: device, interconnect: "", isInternal: false,
-                              bsdName: device, smart: nil,
+                              bsdName: device, smart: nil, ata: nil,
                               unavailableReason: L("Le peripherique n'a pas ete trouve dans le registre du systeme."))
         }
         defer { IOObjectRelease(service) }
@@ -57,15 +61,22 @@ struct DiskHealth {
             }
         }
 
-        var data = MEXNVMeSMART()
-        let ok = mex_read_nvme_smart(service, &data)
+        // Deux dialectes : le journal NVMe des disques internes recents, la
+        // table d'attributs ATA des disques SATA et des boitiers USB qui
+        // traduisent les commandes (SAT). On essaie l'un puis l'autre.
+        var nvme = MEXNVMeSMART()
+        let hasNVMe = mex_read_nvme_smart(service, &nvme)
+        var ataData = MEXATASMART()
+        let hasATA = hasNVMe ? false : mex_read_ata_smart(service, &ataData)
+
         return DiskHealth(
             deviceName: name,
             interconnect: interconnect,
             isInternal: isInternal,
             bsdName: device,
-            smart: ok ? data : nil,
-            unavailableReason: ok ? nil : L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent."))
+            smart: hasNVMe ? nvme : nil,
+            ata: hasATA ? ataData : nil,
+            unavailableReason: (hasNVMe || hasATA) ? nil : L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent."))
     }
 
     /// Vrai si le disque qui porte ce volume rend effectivement des donnees
@@ -128,6 +139,7 @@ struct DiskHealth {
 
     /// Les releves, dans l'ordre ou ils comptent pour un utilisateur.
     var measures: [Measure] {
+        if let ata { return ataMeasures(ata) }
         guard let smart else { return [] }
         var list: [Measure] = []
 
@@ -198,8 +210,127 @@ struct DiskHealth {
         return list
     }
 
+    // MARK: - Attributs ATA
+
+    /// Les attributs ATA portent des identifiants normalises ; seuls ceux qui
+    /// parlent a un utilisateur sont presentes, les autres restent caches sauf
+    /// s'ils passent sous le seuil du fabricant.
+    private func ataMeasures(_ report: MEXATASMART) -> [Measure] {
+        var list: [Measure] = []
+        let attributes = withUnsafeBytes(of: report.attributes) { raw -> [MEXATAAttribute] in
+            let buffer = raw.bindMemory(to: MEXATAAttribute.self)
+            return Array(buffer.prefix(Int(report.attributeCount)))
+        }
+
+        for attribute in attributes {
+            let failing = attribute.threshold > 0 && attribute.current <= attribute.threshold
+            guard let known = Self.ataLabel(for: attribute.id) else {
+                if failing {
+                    list.append(Measure(
+                        label: L("Attribut %d (specifique au fabricant)", Int(attribute.id)),
+                        value: "\(attribute.current) / \(attribute.threshold)",
+                        isAbnormal: true,
+                        explanation: L("Le disque signale cette valeur comme ayant franchi le seuil fixe par son fabricant. Sa signification exacte depend du modele.")))
+                }
+                continue
+            }
+            list.append(Measure(
+                label: known.label,
+                value: known.format(attribute.raw, attribute.current),
+                isAbnormal: failing || known.abnormal(attribute.raw),
+                explanation: known.explanation))
+        }
+        return list
+    }
+
+    private struct ATADescriptor {
+        let label: String
+        let explanation: String
+        let format: (UInt64, UInt8) -> String
+        let abnormal: (UInt64) -> Bool
+    }
+
+    private static func ataLabel(for id: UInt8) -> ATADescriptor? {
+        func count(_ raw: UInt64, _ normalized: UInt8) -> String { Fmt.decimal(raw) }
+        switch id {
+        case 5:
+            return ATADescriptor(
+                label: L("Secteurs realloues"),
+                explanation: L("Secteurs devenus illisibles que le disque a remplaces par des secteurs de reserve. Au-dela de zero, la surveillance s'impose ; une progression rapide annonce une panne."),
+                format: count, abnormal: { $0 > 0 })
+        case 9:
+            return ATADescriptor(
+                label: L("Heures de fonctionnement"),
+                explanation: L("Duree totale pendant laquelle le disque a ete alimente."),
+                format: { raw, _ in L("%@ h", Fmt.decimal(raw)) }, abnormal: { _ in false })
+        case 12:
+            return ATADescriptor(
+                label: L("Demarrages"),
+                explanation: L("Nombre de mises sous tension du disque."),
+                format: count, abnormal: { _ in false })
+        case 187:
+            return ATADescriptor(
+                label: L("Erreurs non corrigees"),
+                explanation: L("Erreurs de lecture que le disque n'a pas su corriger. Toute valeur superieure a zero merite une sauvegarde immediate."),
+                format: count, abnormal: { $0 > 0 })
+        case 188:
+            return ATADescriptor(
+                label: L("Commandes expirees"),
+                explanation: L("Commandes restees sans reponse assez longtemps pour etre abandonnees. Souvent un probleme de cable ou d'alimentation plutot que de disque."),
+                format: count, abnormal: { _ in false })
+        case 190, 194:
+            return ATADescriptor(
+                label: L("Temperature"),
+                explanation: L("Temperature relevee par le disque. Au-dela de 70 °C, il ralentit volontairement pour se proteger."),
+                format: { raw, _ in String(format: "%d °C", Int(raw & 0xFF)) },
+                abnormal: { ($0 & 0xFF) >= 70 })
+        case 196:
+            return ATADescriptor(
+                label: L("Evenements de reallocation"),
+                explanation: L("Nombre de tentatives de deplacement de donnees vers des secteurs de reserve."),
+                format: count, abnormal: { $0 > 0 })
+        case 197:
+            return ATADescriptor(
+                label: L("Secteurs en attente"),
+                explanation: L("Secteurs instables, en attente d'etre reallouees. Une valeur non nulle qui persiste signale un disque qui se degrade."),
+                format: count, abnormal: { $0 > 0 })
+        case 198:
+            return ATADescriptor(
+                label: L("Secteurs non corrigibles"),
+                explanation: L("Secteurs definitivement illisibles. Sauvegardez sans attendre."),
+                format: count, abnormal: { $0 > 0 })
+        case 199:
+            return ATADescriptor(
+                label: L("Erreurs de transmission (CRC)"),
+                explanation: L("Erreurs detectees sur la liaison entre le disque et l'ordinateur. Elles mettent en cause le cable ou le boitier, rarement le disque."),
+                format: count, abnormal: { _ in false })
+        case 231, 233:
+            return ATADescriptor(
+                label: L("Vie restante estimee"),
+                explanation: L("Part de l'endurance prevue par le fabricant qu'il reste au disque. 100 correspond a un disque neuf."),
+                format: { _, normalized in "\(normalized) %" }, abnormal: { _ in false })
+        case 241:
+            return ATADescriptor(
+                label: L("Donnees ecrites"),
+                explanation: L("Volume total ecrit sur le disque depuis sa fabrication."),
+                format: { raw, _ in Fmt.size(Int64(clamping: raw &* 512)) }, abnormal: { _ in false })
+        case 242:
+            return ATADescriptor(
+                label: L("Donnees lues"),
+                explanation: L("Volume total lu depuis le disque depuis sa fabrication."),
+                format: { raw, _ in Fmt.size(Int64(clamping: raw &* 512)) }, abnormal: { _ in false })
+        default:
+            return nil
+        }
+    }
+
     /// Alertes critiques remontees par le disque lui-meme.
     var criticalWarnings: [String] {
+        if let ata {
+            return ata.thresholdExceeded
+                ? [L("Le disque annonce un risque de defaillance : une de ses valeurs a franchi le seuil du fabricant.")]
+                : []
+        }
         guard let smart, smart.criticalWarning != 0 else { return [] }
         var warnings: [String] = []
         let bits: [(UInt8, String)] = [

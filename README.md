@@ -70,10 +70,13 @@ access.
 
 ### What it does
 
-- **SMART information** for disks that expose it: wear, temperature, spare
-  blocks, power-on hours, power cycles, unsafe shutdowns, errors, data read and
-  written, with a warning icon on out-of-range values and an explanation behind
-  each info marker. Reaching the IOKit SMART client from the sandbox needs the
+- **SMART information** for disks that expose it, in both dialects: the NVMe
+  log of recent internal drives (wear, temperature, spare blocks, power-on
+  hours, power cycles, unsafe shutdowns, errors) and the ATA attribute table of
+  SATA disks and USB enclosures that translate ATA commands (reallocated,
+  pending and uncorrectable sectors, uncorrected errors, temperature, life
+  left). A warning icon marks out-of-range values and an explanation sits
+  behind each info marker. Reaching the IOKit SMART client from the sandbox needs the
   `iokit-user-client-class` temporary exception, which the entitlements declare;
   USB enclosures usually pass no SMART through at all, and the menu entry then
   stays hidden.
@@ -523,13 +526,25 @@ L'en-tete `<IOKit/storage/nvme/NVMeSMARTLibExternal.h>` n'etant pas expose au
 module Swift, un petit module C (`Sources/CSmart`) l'inclut et rend la lecture
 sous forme de structure plate.
 
-Deux limites tiennent au materiel, pas au code :
+Deux dialectes sont lus :
 
-- un boitier USB ne transmet en general pas les commandes de diagnostic au
-  disque qu'il contient : le Crucial X9 de test repond « pas de SMART », et
-  l'entree de menu n'apparait pas pour lui ;
-- les attributs exposes sont ceux du journal SMART NVMe ; un disque SATA
-  ancien n'en rend pas les memes.
+- le **journal SMART NVMe** des disques internes recents : usure, temperature,
+  blocs de rechange, heures, demarrages, arrets brutaux, erreurs du support ;
+- la **table d'attributs ATA** des disques SATA et des boitiers USB qui
+  traduisent les commandes ATA (SAT) : secteurs realloues, secteurs en attente,
+  secteurs non corrigibles, erreurs non corrigees, temperature, heures,
+  demarrages, erreurs de transmission, vie restante. Les attributs portent des
+  identifiants normalises ; seuls ceux qui parlent a un utilisateur sont
+  presentes, les autres restent caches sauf s'ils franchissent le seuil du
+  fabricant, auquel cas ils apparaissent avec leur numero.
+
+Un attribut est signale anormal quand sa valeur normalisee tombe au seuil du
+fabricant, et pour les compteurs de secteurs defectueux des qu'ils depassent
+zero.
+
+Une limite tient au materiel : un boitier USB ne transmet pas toujours les
+commandes de diagnostic au disque qu'il contient. Le Crucial X9 de test est
+dans ce cas, et l'entree de menu n'apparait pas pour lui.
 
 ## Performances
 

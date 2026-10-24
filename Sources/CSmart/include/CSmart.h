@@ -30,4 +30,30 @@ typedef struct {
 /// Renvoie false si le peripherique n'expose pas SMART ou si la lecture echoue.
 bool mex_read_nvme_smart(io_service_t device, MEXNVMeSMART *out);
 
+/// Un attribut SMART ATA, tel que les disques SATA et les boitiers USB qui
+/// traduisent les commandes ATA (SAT) les rendent.
+///
+/// `current` et `worst` sont des valeurs normalisees par le fabricant, sans
+/// unite, d'autant meilleures qu'elles sont hautes ; le disque se declare en
+/// echec des que `current` descend a `threshold`. `raw` porte la mesure brute,
+/// dont le sens depend de l'attribut (heures, nombre de secteurs, degres).
+typedef struct {
+    uint8_t  id;
+    uint8_t  current;
+    uint8_t  worst;
+    uint8_t  threshold;
+    uint64_t raw;          // 48 bits utiles
+} MEXATAAttribute;
+
+#define MEX_ATA_ATTRIBUTE_MAX 30
+
+typedef struct {
+    bool     thresholdExceeded;   // verdict rendu par le disque lui-meme
+    uint32_t attributeCount;
+    MEXATAAttribute attributes[MEX_ATA_ATTRIBUTE_MAX];
+} MEXATASMART;
+
+/// Lit la table d'attributs SMART d'un disque ATA / SAT.
+bool mex_read_ata_smart(io_service_t device, MEXATASMART *out);
+
 #endif
