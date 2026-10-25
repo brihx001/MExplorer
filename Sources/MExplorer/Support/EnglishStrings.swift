@@ -124,6 +124,7 @@ enum EnglishStrings {
         "Cmd Maj N": "Cmd Shift N",
         "Cmd Maj P": "Cmd Shift P",
         "Cmd N": "Cmd N",
+        "Cmd R": "Cmd R",
         "Cmd R ou F5": "Cmd R or F5",
         "Cmd Suppr": "Cmd Delete",
         "Cmd T": "Cmd T",
