@@ -18,6 +18,18 @@ final class FileOperations {
     /// Progression globale, observable par l'interface.
     let progress = FileOperationProgress()
 
+    /// Drapeau lu par l'operation en cours, entre deux elements et, pour une
+    /// copie qui travaille vraiment, tous les mega-octets.
+    private let cancelFlag = OperationCancel()
+
+    /// Demande l'arret de l'operation en cours.
+    func cancelCurrent() {
+        cancelFlag.cancel()
+        progress.markCancelling()
+    }
+
+    var isCancelled: Bool { cancelFlag.isCancelled }
+
     // MARK: - Noms uniques
 
     /// "Rapport.pdf" -> "Rapport 2.pdf" (convention macOS) si le nom est deja pris.
@@ -108,6 +120,7 @@ final class FileOperations {
         run(kind: .delete, count: urls.count) { report in
             var failure: Error?
             for (index, url) in urls.enumerated() {
+                if self.cancelFlag.isCancelled { break }
                 report(index, url.lastPathComponent)
                 do { try FileManager.default.removeItem(at: url) }
                 catch { failure = failure ?? error }
@@ -155,7 +168,7 @@ final class FileOperations {
     }
 
     /// Choix de l'utilisateur quand un element du meme nom existe deja.
-    enum ConflictResolution { case keepBoth, replace }
+    enum ConflictResolution { case keepBoth, replace, skip }
 
     func transfer(_ urls: [URL],
                   to destination: URL,
@@ -173,48 +186,81 @@ final class FileOperations {
                 && fm.fileExists(atPath: destination.appendingPathComponent(source.lastPathComponent).path)
         }
         guard !conflicts.isEmpty else {
-            perform(urls, to: destination, kind: kind, resolution: .keepBoth,
+            perform(urls, to: destination, kind: kind, resolutions: [:],
                     undoManager: undoManager, completion: completion)
             return
         }
-        askConflict(conflicts.map(\.lastPathComponent), kind: kind) { [weak self] resolution in
+        resolveConflicts(conflicts, kind: kind) { [weak self] resolutions in
             guard let self else { return }
-            guard let resolution else { completion?([], nil); return }
-            self.perform(urls, to: destination, kind: kind, resolution: resolution,
+            guard let resolutions else { completion?([], nil); return }
+            self.perform(urls, to: destination, kind: kind, resolutions: resolutions,
                          undoManager: undoManager, completion: completion)
         }
     }
 
-    /// Propose de conserver les deux elements, de remplacer, ou d'annuler.
-    /// `nil` en reponse signifie annuler.
-    private func askConflict(_ names: [String],
+    /// Interroge l'utilisateur element par element, avec « Appliquer a tous »
+    /// pour trancher d'un coup le reste de la file.
+    ///
+    /// Le Finder procede ainsi : une seule reponse imposee a tout le lot
+    /// empeche de garder un fichier et d'en remplacer un autre.
+    /// `nil` en reponse signifie annuler l'operation entiere.
+    private func resolveConflicts(_ conflicts: [URL],
+                                  kind: TransferKind,
+                                  completion: @escaping ([String: ConflictResolution]?) -> Void) {
+        var resolutions: [String: ConflictResolution] = [:]
+        var remaining = conflicts
+
+        func step() {
+            guard !remaining.isEmpty else { completion(resolutions); return }
+            let current = remaining.removeFirst()
+            askConflict(current.lastPathComponent, kind: kind, left: remaining.count) { choice, applyToAll in
+                guard let choice else { completion(nil); return }
+                resolutions[current.lastPathComponent] = choice
+                if applyToAll {
+                    for url in remaining { resolutions[url.lastPathComponent] = choice }
+                    remaining = []
+                }
+                step()
+            }
+        }
+        step()
+    }
+
+    /// Propose de conserver les deux elements, de remplacer, d'ignorer ou
+    /// d'annuler. `nil` en reponse signifie annuler toute l'operation.
+    private func askConflict(_ name: String,
                              kind: TransferKind,
-                             completion: @escaping (ConflictResolution?) -> Void) {
+                             left: Int,
+                             completion: @escaping (ConflictResolution?, Bool) -> Void) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = names.count == 1
-            ? L("Un element nomme \"%@\" existe deja a cet emplacement.", names[0])
-            : L("%d elements portent deja ces noms a cet emplacement.", names.count)
-        let single = names.count == 1
-        switch (kind, single) {
-        case (.copy, true):
-            alert.informativeText = L("Conservez les deux, remplacez l'element existant, ou annulez la copie.")
-        case (.copy, false):
-            alert.informativeText = L("Conservez les deux, remplacez les elements existants, ou annulez la copie.")
-        case (.move, true):
-            alert.informativeText = L("Conservez les deux, remplacez l'element existant, ou annulez le deplacement.")
-        case (.move, false):
-            alert.informativeText = L("Conservez les deux, remplacez les elements existants, ou annulez le deplacement.")
-        }
+        alert.messageText = L("Un element nomme \"%@\" existe deja a cet emplacement.", name)
+        alert.informativeText = kind == .copy
+            ? L("Conservez les deux, remplacez l'element existant, ignorez-le, ou annulez la copie.")
+            : L("Conservez les deux, remplacez l'element existant, ignorez-le, ou annulez le deplacement.")
         alert.addButton(withTitle: L("Conserver les deux"))
         alert.addButton(withTitle: L("Remplacer"))
+        alert.addButton(withTitle: L("Ignorer"))
         alert.addButton(withTitle: L("Annuler", context: "bouton"))
 
+        // La case n'a de sens qu'avec une file derriere : sur le dernier
+        // element, « appliquer a tous » ne s'appliquerait a rien.
+        var applyToAll: NSButton?
+        if left > 0 {
+            let box = NSButton(checkboxWithTitle: L("Appliquer aux %d elements suivants", left),
+                               target: nil, action: nil)
+            box.state = .off
+            alert.accessoryView = box
+            applyToAll = box
+        }
+
         let handle: (NSApplication.ModalResponse) -> Void = { response in
+            let all = applyToAll?.state == .on
             switch response {
-            case .alertFirstButtonReturn: completion(.keepBoth)
-            case .alertSecondButtonReturn: completion(.replace)
-            default: completion(nil)
+            case .alertFirstButtonReturn: completion(.keepBoth, all)
+            case .alertSecondButtonReturn: completion(.replace, all)
+            case .alertThirdButtonReturn: completion(.skip, all)
+            default: completion(nil, false)
             }
         }
         if let window = NSApp.keyWindow {
@@ -227,37 +273,58 @@ final class FileOperations {
     private func perform(_ urls: [URL],
                          to destination: URL,
                          kind: TransferKind,
-                         resolution: ConflictResolution,
+                         resolutions: [String: ConflictResolution],
                          undoManager: UndoManager?,
                          completion: (([URL], Error?) -> Void)?) {
         let opKind: FileOperationProgress.Kind = (kind == .copy) ? .copy : .move
 
+        // Le volume total sert d'echelle a la barre : sans lui, une copie d'un
+        // seul gros fichier resterait a zero pour cent jusqu'a la fin.
+        let totalBytes = urls.reduce(Int64(0)) { $0 + FileCopier.size(of: $1) }
+        DispatchQueue.main.async { self.progress.setTotalBytes(totalBytes) }
+
         run(kind: opKind, count: urls.count) { report in
             var created: [URL] = []
+            var sources: [URL] = []
             var failure: Error?
             var replacedAny = false
+            var doneBytes: Int64 = 0
             let fm = FileManager.default
+
             for (index, source) in urls.enumerated() {
+                if self.cancelFlag.isCancelled { break }
                 report(index, source.lastPathComponent)
+                let itemBytes = FileCopier.size(of: source)
+                let base = doneBytes
+                let onBytes: (Int64) -> Void = { [weak self] copied in
+                    self?.progress.setBytes(base + copied)
+                }
+
                 let sameFolder = source.deletingLastPathComponent().standardizedFileURL == destination.standardizedFileURL
-                if sameFolder, kind == .move { continue }
+                if sameFolder, kind == .move { doneBytes += itemBytes; continue }
+
                 var target = destination.appendingPathComponent(source.lastPathComponent)
                 var replacing = false
                 if fm.fileExists(atPath: target.path) {
-                    if resolution == .replace && !sameFolder {
+                    switch resolutions[source.lastPathComponent] ?? .keepBoth {
+                    case .skip:
+                        doneBytes += itemBytes
+                        continue
+                    case .replace where !sameFolder:
                         replacing = true
-                    } else {
+                    default:
                         target = Self.uniqueURL(for: target)
                     }
                 }
+
                 do {
                     if replacing {
                         // Ecriture sous un nom temporaire puis echange : l'element
                         // existant n'est detruit qu'une fois le nouveau en place.
                         let temp = destination.appendingPathComponent(".mexplorer-\(UUID().uuidString)")
                         switch kind {
-                        case .copy: try fm.copyItem(at: source, to: temp)
-                        case .move: try fm.moveItem(at: source, to: temp)
+                        case .copy: try FileCopier.copy(source, to: temp, cancel: self.cancelFlag, onBytes: onBytes)
+                        case .move: try FileCopier.move(source, to: temp, cancel: self.cancelFlag, onBytes: onBytes)
                         }
                         do {
                             _ = try fm.replaceItemAt(target, withItemAt: temp)
@@ -268,31 +335,39 @@ final class FileOperations {
                         replacedAny = true
                     } else {
                         switch kind {
-                        case .copy: try fm.copyItem(at: source, to: target)
-                        case .move: try fm.moveItem(at: source, to: target)
+                        case .copy: try FileCopier.copy(source, to: target, cancel: self.cancelFlag, onBytes: onBytes)
+                        case .move: try FileCopier.move(source, to: target, cancel: self.cancelFlag, onBytes: onBytes)
                         }
                     }
                     created.append(target)
+                    sources.append(source)
+                } catch is FileCopier.Cancelled {
+                    break
                 } catch {
                     failure = failure ?? error
                 }
+                doneBytes += itemBytes
+                self.progress.setBytes(doneBytes)
             }
             self.lastCreated = created
+            self.lastSources = sources
             self.lastReplaced = replacedAny
             return failure
         } completion: { [weak self] error in
             guard let self else { return }
             let created = self.lastCreated
+            let sources = self.lastSources
             // Un remplacement a detruit l'element precedent : annuler ne ferait
-            // que supprimer le nouveau sans rendre l'ancien.
-            if error == nil, !created.isEmpty, !self.lastReplaced {
+            // que supprimer le nouveau sans rendre l'ancien. Une operation
+            // interrompue ne s'annule pas davantage : elle est deja partielle.
+            if error == nil, !created.isEmpty, !self.lastReplaced, !self.cancelFlag.isCancelled {
                 undoManager?.registerUndo(withTarget: self) { target in
                     switch kind {
                     case .copy:
                         target.deletePermanently(created)
                     case .move:
-                        for (i, url) in created.enumerated() where i < urls.count {
-                            try? FileManager.default.moveItem(at: url, to: urls[i])
+                        for (i, url) in created.enumerated() where i < sources.count {
+                            try? FileManager.default.moveItem(at: url, to: sources[i])
                         }
                         target.notifyChange()
                     }
@@ -305,6 +380,9 @@ final class FileOperations {
     }
 
     private var lastCreated: [URL] = []
+    /// Sources effectivement traitees, dans l'ordre de `lastCreated` : un
+    /// element ignore ou en echec ne doit pas decaler l'annulation.
+    private var lastSources: [URL] = []
     private var lastReplaced = false
 
     func duplicate(_ urls: [URL], undoManager: UndoManager? = nil, completion: (([URL], Error?) -> Void)? = nil) {
@@ -312,6 +390,7 @@ final class FileOperations {
             var created: [URL] = []
             var failure: Error?
             for (index, source) in urls.enumerated() {
+                if self.cancelFlag.isCancelled { break }
                 report(index, source.lastPathComponent)
                 let ext = source.pathExtension
                 let base = source.deletingPathExtension().lastPathComponent
@@ -430,6 +509,7 @@ final class FileOperations {
                      count: Int,
                      work: @escaping ((Int, String) -> Void) -> Error?,
                      completion: @escaping (Error?) -> Void) {
+        cancelFlag.reset()
         DispatchQueue.main.async { self.progress.begin(kind: kind, total: count) }
         queue.addOperation { [weak self] in
             let error = work { index, label in
@@ -464,14 +544,38 @@ final class FileOperationProgress: ObservableObject {
     @Published private(set) var completed = 0
     @Published private(set) var total = 0
     @Published private(set) var label = ""
+    /// Octets ecrits et volume attendu : seule echelle juste quand un seul
+    /// element pese plusieurs gigaoctets.
+    @Published private(set) var bytesDone: Int64 = 0
+    @Published private(set) var bytesTotal: Int64 = 0
+    /// L'arret a ete demande mais l'element en cours n'a pas encore rendu la main.
+    @Published private(set) var isCancelling = false
+
+    /// L'affichage attend un court instant : une copie instantanee ne doit pas
+    /// faire clignoter la barre d'etat.
+    private var reveal: DispatchWorkItem?
 
     func begin(kind: Kind, total: Int) {
         self.kind = kind
         self.total = total
         self.completed = 0
         self.label = ""
-        self.isRunning = total > 1 || kind == .compress
+        self.bytesDone = 0
+        self.isCancelling = false
+        reveal?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.isRunning = true }
+        reveal = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
     }
+
+    func setTotalBytes(_ bytes: Int64) { bytesTotal = bytes }
+
+    /// Appele depuis le thread de copie, tous les mega-octets.
+    func setBytes(_ bytes: Int64) {
+        DispatchQueue.main.async { self.bytesDone = bytes }
+    }
+
+    func markCancelling() { isCancelling = true }
 
     func update(completed: Int, label: String) {
         self.completed = completed
@@ -479,9 +583,18 @@ final class FileOperationProgress: ObservableObject {
     }
 
     func finish() {
+        reveal?.cancel()
+        reveal = nil
         isRunning = false
+        isCancelling = false
         completed = total
+        bytesTotal = 0
+        bytesDone = 0
     }
 
-    var fraction: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+    /// Progression en octets quand le volume est connu, en elements sinon.
+    var fraction: Double {
+        if bytesTotal > 0 { return min(Double(bytesDone) / Double(bytesTotal), 1) }
+        return total > 0 ? Double(completed) / Double(total) : 0
+    }
 }

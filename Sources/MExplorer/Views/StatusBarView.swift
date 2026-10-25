@@ -7,6 +7,9 @@ struct StatusBarView: View {
     @ObservedObject var model: WindowModel
     /// Redessine la vue quand la langue (ou un reglage global) change.
     @ObservedObject private var appSettings = AppSettings.shared
+    /// Sans cette observation, l'apparition et la disparition de la barre de
+    /// progression ne seraient pas redessinees.
+    @ObservedObject private var operations = FileOperations.shared.progress
     @State private var selectionSize: Int64?
 
     private var tab: TabState { model.activeTab }
@@ -43,9 +46,9 @@ struct StatusBarView: View {
                 Text(L("Calcul des tailles...")).font(.system(size: 11)).foregroundStyle(.secondary)
             }
 
-            if FileOperations.shared.progress.isRunning {
+            if operations.isRunning {
                 Divider().frame(height: 12)
-                OperationProgressView(progress: FileOperations.shared.progress)
+                OperationProgressView(progress: operations)
             }
 
             Spacer(minLength: 6)
@@ -160,9 +163,29 @@ struct OperationProgressView: View {
             ProgressView(value: progress.fraction)
                 .frame(width: 90)
                 .controlSize(.small)
-            Text("\(progress.kind.title) \(progress.completed)/\(progress.total)")
+            Text(summary)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
+                .help(progress.label)
+            Button {
+                FileOperations.shared.cancelCurrent()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(progress.isCancelling)
+            .help(L("Arreter l'operation"))
         }
+    }
+
+    /// « Copie 3/12 » ou, quand le volume est connu, « Copie 1,2 Go sur 4,0 Go ».
+    private var summary: String {
+        if progress.isCancelling { return L("Arret en cours...") }
+        if progress.bytesTotal > 0 {
+            return L("%@ %@ sur %@", progress.kind.title,
+                     Fmt.size(progress.bytesDone), Fmt.size(progress.bytesTotal))
+        }
+        return "\(progress.kind.title) \(progress.completed)/\(progress.total)"
     }
 }
