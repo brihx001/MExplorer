@@ -171,17 +171,40 @@ enum FileContextMenu {
         if let single, !single.isNavigableContainer {
             let apps = OpenWith.applications(for: single.url)
             if !apps.isEmpty {
+                let current = OpenWith.defaultApplication(for: single.url)
                 let sub = NSMenu()
                 for app in apps {
                     let icon = NSWorkspace.shared.icon(forFile: app.path)
                     icon.size = NSSize(width: 16, height: 16)
-                    let item = BlockMenuItem(title: OpenWith.name(of: app), image: icon) {
+                    let isDefault = app.standardizedFileURL == current?.standardizedFileURL
+                    let title = isDefault ? L("%@ (par defaut)", OpenWith.name(of: app)) : OpenWith.name(of: app)
+                    let item = BlockMenuItem(title: title, image: icon) {
                         model.openWith(application: app)
                     }
                     sub.addItem(item)
                 }
                 sub.addItem(.separator())
                 sub.addBlockItem(L("Autre application...")) { OpenWith.chooseApplication(model: model) }
+
+                // « Toujours ouvrir avec » porte sur le type du fichier, comme
+                // « Tout modifier » du Finder : c'est la seule granularite que
+                // LaunchServices expose.
+                let always = NSMenu()
+                for app in apps where app.standardizedFileURL != current?.standardizedFileURL {
+                    let icon = NSWorkspace.shared.icon(forFile: app.path)
+                    icon.size = NSSize(width: 16, height: 16)
+                    let item = BlockMenuItem(title: OpenWith.name(of: app), image: icon) {
+                        model.setDefaultApplication(app, for: single.url)
+                    }
+                    always.addItem(item)
+                }
+                if always.numberOfItems > 0 {
+                    sub.addItem(.separator())
+                    let alwaysItem = NSMenuItem(title: L("Toujours ouvrir avec"), action: nil, keyEquivalent: "")
+                    alwaysItem.submenu = always
+                    sub.addItem(alwaysItem)
+                }
+
                 let openWith = NSMenuItem(title: L("Ouvrir avec"), action: nil, keyEquivalent: "")
                 openWith.submenu = sub
                 menu.addItem(openWith)

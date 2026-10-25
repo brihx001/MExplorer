@@ -54,6 +54,8 @@ private struct InfoView: View {
     @State private var totalSize: Int64?
     @State private var newName: String = ""
     @State private var tagsText: String = ""
+    @State private var permissions: PosixPermissions?
+    @State private var permissionsError: String?
 
     var body: some View {
         ScrollView {
@@ -146,15 +148,71 @@ private struct InfoView: View {
     }
 
     private func permissionsSection(_ item: FileItem) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let ownership = PosixPermissions.ownership(at: item.url)
+        return VStack(alignment: .leading, spacing: 6) {
             sectionTitle(L("Autorisations"))
-            infoRow(L("Acces"), item.isWritable ? L("Lecture et ecriture") : L("Lecture seule"))
-            if let posix = try? FileManager.default.attributesOfItem(atPath: item.url.path)[.posixPermissions] as? NSNumber {
-                infoRow(L("Mode POSIX"), String(format: "%03o", posix.intValue & 0o777))
+            if let permissions {
+                accessRow(L("Proprietaire") + (ownership.owner.map { " (\($0))" } ?? ""),
+                          value: permissions.owner, item: item) { $0.owner = $1 }
+                accessRow(L("Groupe") + (ownership.group.map { " (\($0))" } ?? ""),
+                          value: permissions.group, item: item) { $0.group = $1 }
+                accessRow(L("Tous les autres"),
+                          value: permissions.others, item: item) { $0.others = $1 }
+                infoRow(L("Mode POSIX"), permissions.octal)
+            } else {
+                infoRow(L("Acces"), item.isWritable ? L("Lecture et ecriture") : L("Lecture seule"))
             }
-            if let owner = try? FileManager.default.attributesOfItem(atPath: item.url.path)[.ownerAccountName] as? String {
-                infoRow(L("Proprietaire"), owner)
+            if let permissionsError {
+                Text(permissionsError)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.red)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            Text(L("Les bits d'execution sont conserves : les retirer rendrait un dossier intraversable et un programme inutilisable."))
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Une ligne de droits : un menu par categorie, comme la fenetre
+    /// d'informations du Finder.
+    private func accessRow(_ label: String,
+                           value: PosixPermissions.Access,
+                           item: FileItem,
+                           apply: @escaping (inout PosixPermissions, PosixPermissions.Access) -> Void) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(width: 150, alignment: .leading)
+            Picker("", selection: Binding(
+                get: { value },
+                set: { newValue in
+                    guard var updated = permissions else { return }
+                    apply(&updated, newValue)
+                    writePermissions(updated, to: item)
+                })) {
+                ForEach(PosixPermissions.Access.allCases) { access in
+                    Text(access.title).tag(access)
+                }
+            }
+            .labelsHidden()
+            .frame(width: 180)
+        }
+    }
+
+    private func writePermissions(_ updated: PosixPermissions, to item: FileItem) {
+        do {
+            try updated.write(to: item.url)
+            permissions = updated
+            permissionsError = nil
+            model.activeTab.reload()
+        } catch {
+            // Le bac a sable et le proprietaire reel peuvent tous deux refuser :
+            // le message du systeme dit lequel.
+            permissionsError = error.localizedDescription
+            permissions = PosixPermissions.read(at: item.url)
         }
     }
 
@@ -214,6 +272,10 @@ private struct InfoView: View {
         items = loaded
         newName = items.first?.displayName ?? ""
         tagsText = items.first?.tagNames.joined(separator: ", ") ?? ""
+        // Les droits ne sont montres que pour un seul element : une selection
+        // multiple n'a pas de mode unique a afficher.
+        permissions = loaded.count == 1 ? loaded.first.flatMap { PosixPermissions.read(at: $0.url) } : nil
+        permissionsError = nil
 
         let files = items.filter { !$0.isNavigableContainer }
         let folders = items.filter { $0.isNavigableContainer }

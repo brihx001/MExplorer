@@ -1,10 +1,11 @@
 import AppKit
 
 enum ColumnID: String, CaseIterable, Codable {
-    case name, dateModified, kind, size, dateCreated, dateAdded, tags, fileExtension, path
+    case name, dateModified, kind, size, dateCreated, dateAdded, tags, fileExtension, path, cloud
 
     var title: String {
         switch self {
+        case .cloud: return L("iCloud")
         case .name: return L("Nom")
         case .dateModified: return L("Modifie le")
         case .kind: return L("Type")
@@ -19,6 +20,7 @@ enum ColumnID: String, CaseIterable, Codable {
 
     var defaultWidth: CGFloat {
         switch self {
+        case .cloud: return 110
         case .name: return 320
         case .dateModified, .dateCreated, .dateAdded: return 150
         case .kind: return 160
@@ -71,7 +73,10 @@ enum SortKey: String, CaseIterable, Codable {
         case .dateAdded: self = .dateAdded
         case .tags: self = .tags
         case .fileExtension: self = .fileExtension
-        case .path: return nil
+        // Ni le chemin ni l'etat iCloud ne servent de critere de tri : le
+        // premier est le meme pour tout un dossier, le second demanderait de
+        // lire la clef iCloud de chaque element, ce que le chargement evite.
+        case .path, .cloud: return nil
         }
     }
 }

@@ -578,6 +578,23 @@ extension FileListViewController: NSTableViewDelegate {
         case .tags: return item.tagNames.joined(separator: ", ")
         case .fileExtension: return item.fileExtension
         case .path: return item.url.deletingLastPathComponent().path
+        case .cloud: return cloudText(for: item)
+        }
+    }
+
+    /// Etat iCloud, lu a la demande et seulement si la colonne est affichee.
+    ///
+    /// Ces deux clefs coutaient a elles seules les deux tiers du chargement
+    /// d'un dossier de 5 200 elements : elles restent hors du jeu de clefs
+    /// lu en masse, et ne sont interrogees que pour les lignes dessinees.
+    private func cloudText(for item: FileItem) -> String {
+        let state = item.cloudState
+        guard state.isUbiquitous else { return "" }
+        switch state.status {
+        case .current?: return L("Telecharge")
+        case .downloaded?: return L("Telecharge")
+        case .notDownloaded?: return L("Dans iCloud")
+        default: return L("Dans iCloud")
         }
     }
 }

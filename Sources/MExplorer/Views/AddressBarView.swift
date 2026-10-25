@@ -18,10 +18,12 @@ struct AddressBarView: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            navButton("chevron.left", enabled: tab.canGoBack, help: L("Precedent (Cmd [)")) { tab.goBack() }
-                .contextMenu { historyMenu(entries: tab.backEntries()) }
-            navButton("chevron.right", enabled: tab.canGoForward, help: L("Suivant (Cmd ])")) { tab.goForward() }
-                .contextMenu { historyMenu(entries: tab.forwardEntries()) }
+            historyButton("chevron.left", enabled: tab.canGoBack,
+                          help: L("Precedent (Cmd [) - maintenir pour l'historique"),
+                          entries: tab.backEntries()) { tab.goBack() }
+            historyButton("chevron.right", enabled: tab.canGoForward,
+                          help: L("Suivant (Cmd ]) - maintenir pour l'historique"),
+                          entries: tab.forwardEntries()) { tab.goForward() }
             navButton("chevron.up", enabled: tab.canGoUp, help: L("Dossier parent (Cmd Haut)")) { tab.goUp() }
             navButton("arrow.clockwise", enabled: true, help: L("Actualiser (Cmd R)")) { tab.reload() }
 
@@ -69,18 +71,40 @@ struct AddressBarView: View {
         }
     }
 
+    /// Clic : un pas en arriere. Clic maintenu ou clic droit : l'historique,
+    /// comme dans un navigateur.
+    private func historyButton(_ symbol: String, enabled: Bool, help: String,
+                               entries: [(index: Int, location: Location)],
+                               action: @escaping () -> Void) -> some View {
+        Menu {
+            historyMenu(entries: entries)
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 26, height: 24)
+        } primaryAction: {
+            action()
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: 26, height: 24)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.3)
+        .help(help)
+        .contextMenu { historyMenu(entries: entries) }
+    }
+
     // MARK: - Fil d'Ariane / champ editable
 
     @ViewBuilder
     private var addressField: some View {
         ZStack {
             if model.isAddressBarEditing {
-                TextField(L("Chemin"), text: $editedPath)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
+                PathTextField(text: $editedPath,
+                              placeholder: L("Chemin"),
+                              onSubmit: { commitPath() },
+                              onCancel: { model.isAddressBarEditing = false })
                     .focused($pathFieldFocused)
-                    .onSubmit { commitPath() }
-                    .onExitCommand { model.isAddressBarEditing = false }
                     .padding(.horizontal, 8)
             } else {
                 breadcrumb

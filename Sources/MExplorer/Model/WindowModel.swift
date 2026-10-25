@@ -489,6 +489,27 @@ final class WindowModel: ObservableObject {
                                 configuration: config, completionHandler: nil)
     }
 
+    /// Associe l'application au type du fichier, apres confirmation : le
+    /// reglage sort du bac a sable et vaut pour toutes les applications.
+    func setDefaultApplication(_ application: URL, for url: URL) {
+        let alert = NSAlert()
+        alert.messageText = L("Ouvrir tous les documents de ce type avec %@ ?", OpenWith.name(of: application))
+        alert.informativeText = L("Le reglage s'applique a tous les fichiers de meme type, dans MExplorer comme dans le Finder.")
+        alert.addButton(withTitle: L("Tout modifier"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
+        let run: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            OpenWith.setDefault(application: application, for: url) { error in
+                if let error { self?.present(error) }
+            }
+        }
+        if let window, window.isVisible {
+            alert.beginSheetModal(for: window, completionHandler: run)
+        } else {
+            run(alert.runModal())
+        }
+    }
+
     func share(from view: NSView) {
         let urls = selectionURLs
         guard !urls.isEmpty else { return }

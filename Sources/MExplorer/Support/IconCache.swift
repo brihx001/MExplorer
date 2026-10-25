@@ -18,6 +18,7 @@ final class IconCache {
     private init() {
         generic.countLimit = 400
         specific.countLimit = 2000
+        badges.countLimit = 2000
         // Une vignette de 256 points en Retina pese environ un demi-megaoctet :
         // 1500 d'entre elles depasseraient le demi-gigaoctet. La limite porte
         // donc sur les octets, le nombre ne servant que de garde-fou.
@@ -41,6 +42,23 @@ final class IconCache {
     /// etre appelee pendant le dessin d'une cellule. On rend l'icone generique
     /// du type, puis on resout l'icone specifique en arriere-plan.
     func icon(for item: FileItem) -> NSImage {
+        guard let badge = IconBadge.kind(for: item) else { return baseIcon(for: item) }
+        return badged(baseIcon(for: item), badge: badge, key: item.url.path)
+    }
+
+    /// Icones marquees, composees une fois puis gardees : recomposer a chaque
+    /// dessin de cellule couterait une allocation par ligne et par defilement.
+    private let badges = NSCache<NSString, NSImage>()
+
+    private func badged(_ icon: NSImage, badge: IconBadge.Kind, key: String) -> NSImage {
+        let cacheKey = "\(badge.rawValue)|\(key)|\(Int(icon.size.width))" as NSString
+        if let cached = badges.object(forKey: cacheKey) { return cached }
+        let composed = IconBadge.apply(badge, to: icon)
+        badges.setObject(composed, forKey: cacheKey)
+        return composed
+    }
+
+    private func baseIcon(for item: FileItem) -> NSImage {
         guard needsSpecificIcon(item) else { return genericIcon(for: item) }
         let path = item.url.path
         if let cached = specific.object(forKey: path as NSString) { return cached }
@@ -186,6 +204,9 @@ final class IconCache {
 
     func invalidate(path: String) {
         specific.removeObject(forKey: path as NSString)
+        // Le cache des pastilles est indexe par chemin, pastille et taille :
+        // vider la seule entree connue laisserait les autres tailles perimees.
+        badges.removeAllObjects()
         for side in [16, 32, 48, 64, 96, 128, 256] as [CGFloat] {
             thumbnails.removeObject(forKey: thumbKey(URL(fileURLWithPath: path), side) as NSString)
         }
