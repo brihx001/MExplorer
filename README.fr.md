@@ -13,9 +13,9 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.5.4](https://github.com/brihx001/MExplorer/releases/tag/v0.5.4)**
-— version de documentation ; la 0.5.2 a apporte les informations des cartes
-memoire dans la fenetre SMART.
+**Derniere version : [v0.6.0](https://github.com/brihx001/MExplorer/releases/tag/v0.6.0)**
+— renommage par lot, copies annulables, archives, occupation et doublons,
+colonnes de droits Unix, et fenetres qui reviennent ou on les a laissees.
 
 ## Prerequis
 

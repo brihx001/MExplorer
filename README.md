@@ -13,9 +13,9 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.5.4](https://github.com/brihx001/MExplorer/releases/tag/v0.5.4)**
-— documentation release; 0.5.2 brought memory-card information to the SMART
-window.
+**Latest release: [v0.6.0](https://github.com/brihx001/MExplorer/releases/tag/v0.6.0)**
+— batch rename, cancellable copies, archives, folder usage and duplicates,
+Unix permission columns, and windows that reopen where you left them.
 
 ## Requirements
 
