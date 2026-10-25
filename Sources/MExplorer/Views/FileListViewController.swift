@@ -205,7 +205,7 @@ final class FileListViewController: NSViewController, FileAreaController {
         let headerFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
         var width = textWidth(column.title, font: headerFont) + 20   // tri + marges
 
-        let cellFont = NSFont.systemFont(ofSize: columnID == .name ? 13 : 12)
+        let cellFont = Self.cellFont(for: columnID)
         for row in rows.prefix(5000) {
             guard let item = row.item else { continue }
             var candidate = textWidth(text(for: item, column: columnID), font: cellFont) + 10
@@ -252,6 +252,7 @@ final class FileListViewController: NSViewController, FileAreaController {
             return
         }
 
+        let previousColumns = appliedLayout?.columns ?? []
         isRebuildingColumns = true
         defer {
             // Les notifications de layout arrivent apres le tour de boucle courant.
@@ -283,6 +284,16 @@ final class FileListViewController: NSViewController, FileAreaController {
         tableView.rowHeight = 24
         appliedLayout = layout
         applySortState()
+
+        // Une colonne qu'on vient de cocher peut tomber hors du cadre quand les
+        // precedentes ont ete elargies : la montrer, sinon rien ne signale
+        // qu'elle a bien ete ajoutee. Au tour suivant, la table n'ayant pas
+        // encore pose ses colonnes.
+        if !previousColumns.isEmpty,
+           let added = wanted.last(where: { !previousColumns.contains($0) }),
+           let index = wanted.firstIndex(of: added) {
+            DispatchQueue.main.async { [weak self] in self?.tableView.scrollColumnToVisible(index) }
+        }
     }
 
     /// Aligne le tri de la table sur les reglages de l'onglet, pour que le clic
@@ -552,6 +563,7 @@ extension FileListViewController: NSTableViewDelegate {
         let cell = (tableView.makeView(withIdentifier: id, owner: self) as? NSTableCellView)
             ?? PlainTextCell(identifier: id)
         cell.textField?.alignment = columnID.isRightAligned ? .right : .left
+        cell.textField?.font = Self.cellFont(for: columnID)
         cell.textField?.stringValue = text(for: item, column: columnID)
         cell.alphaValue = FileClipboard.shared.isMarkedForCut(item.url) ? 0.45 : 1
         return cell
@@ -561,6 +573,14 @@ extension FileListViewController: NSTableViewDelegate {
         guard !isApplyingSelection, let tab else { return }
         tab.selectedURLs = tableView.selectedRowIndexes.compactMap { rows[$0].item?.url }
         QuickLookCoordinator.shared.updateIfVisible(urls: tab.selectedURLs)
+    }
+
+    /// Police d'une cellule. La cellule texte est recyclee d'une colonne a
+    /// l'autre : la police doit donc etre reposee a chaque reutilisation, et
+    /// non seulement a la creation.
+    static func cellFont(for columnID: ColumnID) -> NSFont {
+        if columnID.isMonospaced { return .monospacedSystemFont(ofSize: 11, weight: .regular) }
+        return .systemFont(ofSize: columnID == .name ? 13 : 12)
     }
 
     private func text(for item: FileItem, column: ColumnID) -> String {
@@ -579,6 +599,9 @@ extension FileListViewController: NSTableViewDelegate {
         case .fileExtension: return item.fileExtension
         case .path: return item.url.deletingLastPathComponent().path
         case .cloud: return cloudText(for: item)
+        case .permissions: return item.unixAttributes?.text ?? ""
+        case .owner: return item.unixAttributes?.userName ?? ""
+        case .group: return item.unixAttributes?.groupName ?? ""
         }
     }
 
@@ -781,3 +804,4 @@ final class GroupHeaderCell: NSTableCellView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) non supporte") }
 }
+

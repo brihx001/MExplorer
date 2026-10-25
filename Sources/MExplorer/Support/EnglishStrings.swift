@@ -193,6 +193,7 @@ enum EnglishStrings {
         "Dossiers en premier": "Folders first",
         "Dossiers frequents": "Frequent folders",
         "Doublons": "Duplicates",
+        "Droits": "Permissions",
         "Dupliquer": "Duplicate",
         "Dupliquer l'onglet": "Duplicate tab",
         "Edition": "Edit",

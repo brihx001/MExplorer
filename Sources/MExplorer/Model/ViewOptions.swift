@@ -2,10 +2,14 @@ import AppKit
 
 enum ColumnID: String, CaseIterable, Codable {
     case name, dateModified, kind, size, dateCreated, dateAdded, tags, fileExtension, path, cloud
+    case permissions, owner, group
 
     var title: String {
         switch self {
         case .cloud: return L("iCloud")
+        case .permissions: return L("Droits")
+        case .owner: return L("Proprietaire")
+        case .group: return L("Groupe")
         case .name: return L("Nom")
         case .dateModified: return L("Modifie le")
         case .kind: return L("Type")
@@ -21,6 +25,8 @@ enum ColumnID: String, CaseIterable, Codable {
     var defaultWidth: CGFloat {
         switch self {
         case .cloud: return 110
+        case .permissions: return 110
+        case .owner, .group: return 110
         case .name: return 320
         case .dateModified, .dateCreated, .dateAdded: return 150
         case .kind: return 160
@@ -32,6 +38,10 @@ enum ColumnID: String, CaseIterable, Codable {
     }
 
     var isRightAligned: Bool { self == .size }
+
+    /// Les droits s'ecrivent en chasse fixe : sans cela, les trois triplets ne
+    /// s'alignent pas d'une ligne a l'autre et deviennent illisibles.
+    var isMonospaced: Bool { self == .permissions }
 
     static let defaultVisible: [ColumnID] = [.name, .dateModified, .kind, .size]
 }
@@ -73,10 +83,11 @@ enum SortKey: String, CaseIterable, Codable {
         case .dateAdded: self = .dateAdded
         case .tags: self = .tags
         case .fileExtension: self = .fileExtension
-        // Ni le chemin ni l'etat iCloud ne servent de critere de tri : le
-        // premier est le meme pour tout un dossier, le second demanderait de
-        // lire la clef iCloud de chaque element, ce que le chargement evite.
-        case .path, .cloud: return nil
+        // Ces colonnes ne servent pas de critere de tri : le chemin est le
+        // meme pour tout un dossier, et les autres demanderaient d'interroger
+        // chaque element du dossier, y compris ceux qui ne sont pas affiches,
+        // ce que le chargement evite precisement.
+        case .path, .cloud, .permissions, .owner, .group: return nil
         }
     }
 }

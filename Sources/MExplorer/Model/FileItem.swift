@@ -119,6 +119,21 @@ final class FileItem: NSObject {
         return (v?.isUbiquitousItem ?? false, v?.ubiquitousItemDownloadingStatus)
     }
 
+    /// Droits, proprietaire et groupe, lus a la demande et une seule fois.
+    ///
+    /// Ces colonnes sont facultatives : les lire au chargement ferait un
+    /// `lstat` par element dans tous les dossiers, y compris quand elles ne
+    /// sont pas affichees. Le resultat est retenu sur l'element, dont la duree
+    /// de vie est celle du listing : un changement de droits apparait au
+    /// rechargement du dossier, comme le reste.
+    private var cachedUnix: UnixAttributes??
+    var unixAttributes: UnixAttributes? {
+        if let cachedUnix { return cachedUnix }
+        let read = UnixAttributes.read(at: url)
+        cachedUnix = .some(read)
+        return read
+    }
+
     /// Vrai si demander une vignette Quick Look a un sens.
     ///
     /// Les paquets sont exclus volontairement : une requete sur une bibliotheque
