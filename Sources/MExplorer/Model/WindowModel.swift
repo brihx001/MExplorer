@@ -201,6 +201,12 @@ final class WindowModel: ObservableObject {
             if AppSettings.shared.openFoldersInNewTab { openInNewTab(url) } else { open(url) }
             return
         }
+        // Une archive s'ouvre comme un dossier plutot que de partir a
+        // l'application associee, qui la decompresserait sur place.
+        if items.count == 1, let single = items.first, ArchiveReader.isArchive(single.url) {
+            openArchive(single.url)
+            return
+        }
         for item in items {
             if let folder = folderTarget(of: item) {
                 openInNewTab(folder)
@@ -347,6 +353,59 @@ final class WindowModel: ObservableObject {
             panel.beginSheetModal(for: window, completionHandler: run)
         } else {
             run(panel.runModal())
+        }
+    }
+
+    // MARK: - Archives
+
+    /// Ouvre l'archive comme un dossier, dans un nouvel onglet.
+    func openArchive(_ url: URL) {
+        ArchiveReader.open(url) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let folder): self.openInNewTab(folder)
+            case .failure(let error): self.present(error)
+            }
+        }
+    }
+
+    /// Extrait l'archive a cote d'elle.
+    func extractArchiveHere(_ url: URL) {
+        guard let destination = currentFolder else { return }
+        extractArchive(url, into: destination)
+    }
+
+    /// Demande ou extraire. Le selecteur vaut aussi autorisation d'acces.
+    func extractArchiveElsewhere(_ url: URL) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = L("Extraire ici")
+        panel.message = L("Choisissez le dossier ou extraire l'archive.")
+        let run: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let destination = panel.url else { return }
+            AccessManager.shared.register(destination)
+            self?.extractArchive(url, into: destination)
+        }
+        if let window, window.isVisible {
+            panel.beginSheetModal(for: window, completionHandler: run)
+        } else {
+            run(panel.runModal())
+        }
+    }
+
+    private func extractArchive(_ url: URL, into destination: URL) {
+        ArchiveReader.extract(url, into: destination) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let folder):
+                FileOperations.shared.notifyChange()
+                self.activeTab.reload()
+                self.activeTab.selectedURLs = [folder]
+            case .failure(let error):
+                self.present(error)
+            }
         }
     }
 

@@ -134,6 +134,18 @@ enum MainMenu {
             add(menu, L("Compresser"), enabled: { model?.selection.isEmpty == false }) {
                 model?.compressSelection()
             }
+            add(menu, L("Ouvrir l'archive"),
+                enabled: { model?.selection.count == 1
+                    && ArchiveReader.isArchive(model?.selection[0].url ?? URL(fileURLWithPath: "/")) }) {
+                guard let url = model?.selection.first?.url else { return }
+                model?.openArchive(url)
+            }
+            add(menu, L("Extraire ici"),
+                enabled: { model?.selection.count == 1
+                    && ArchiveReader.isArchive(model?.selection[0].url ?? URL(fileURLWithPath: "/")) }) {
+                guard let url = model?.selection.first?.url else { return }
+                model?.extractArchiveHere(url)
+            }
             menu.addItem(transferSubmenu(kind: .move, title: L("Deplacer vers")))
             menu.addItem(transferSubmenu(kind: .copy, title: L("Copier vers")))
             menu.addItem(.separator())
@@ -273,6 +285,7 @@ enum MainMenu {
                 tab.update { $0.calculateFolderSizes = value }
             }
             menu.addItem(.separator())
+            add(menu, L("Personnaliser la barre de commandes...")) { CommandBarEditorController.show() }
             add(menu, L("Actualiser"), "r") { tab?.reload() }
         }
     }

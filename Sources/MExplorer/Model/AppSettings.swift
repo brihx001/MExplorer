@@ -45,6 +45,31 @@ final class AppSettings: ObservableObject {
         set { d.set(newValue, forKey: "showPreviewPane") }
     }
 
+    /// Composition de la barre de commandes.
+    ///
+    /// Un identifiant inconnu est ignore et les elements non retirables sont
+    /// toujours presents : une version qui en ajouterait ne doit ni perdre le
+    /// reglage ni laisser une barre inutilisable.
+    var commandBarItems: [CommandBarItem] {
+        get {
+            guard let stored = d.stringArray(forKey: "commandBarItems") else { return CommandBarItem.defaults }
+            var items = stored.compactMap { CommandBarItem(rawValue: $0) }
+            for item in CommandBarItem.allCases where !item.isRemovable && !items.contains(item) {
+                items.append(item)
+            }
+            return items.isEmpty ? CommandBarItem.defaults : items
+        }
+        set {
+            d.set(newValue.map(\.rawValue), forKey: "commandBarItems")
+            objectWillChange.send()
+            NotificationCenter.default.post(name: Self.commandBarChanged, object: nil)
+        }
+    }
+
+    static let commandBarChanged = Notification.Name("com.jerome.mexplorer.commandBarChanged")
+
+    func resetCommandBar() { commandBarItems = CommandBarItem.defaults }
+
     /// Dossiers vises recemment par « Deplacer vers » ou « Copier vers »,
     /// du plus recent au plus ancien. Dix suffisent : au-dela, le sous-menu
     /// devient une liste a lire plutot qu'un raccourci.

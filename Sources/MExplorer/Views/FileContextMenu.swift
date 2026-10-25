@@ -246,6 +246,13 @@ enum FileContextMenu {
         menu.addBlockItem(L("Dupliquer"), symbol: "plus.square.on.square") { model.duplicateSelection() }
         menu.addBlockItem(L("Creer un alias"), symbol: "arrowshape.turn.up.left") { model.makeAliasForSelection() }
         menu.addBlockItem(L("Compresser"), symbol: "archivebox") { model.compressSelection() }
+        if let single, ArchiveReader.isArchive(single.url) {
+            menu.addBlockItem(L("Ouvrir l'archive"), symbol: "archivebox.circle") {
+                model.openArchive(single.url)
+            }
+            menu.addBlockItem(L("Extraire ici")) { model.extractArchiveHere(single.url) }
+            menu.addBlockItem(L("Extraire vers...")) { model.extractArchiveElsewhere(single.url) }
+        }
         if items.contains(where: { !$0.isDirectory }) {
             menu.addBlockItem(L("Somme de controle..."), symbol: "number") { model.showChecksums() }
         }

@@ -13,27 +13,10 @@ struct CommandBarView: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            newMenu
-            divider
-
-            iconButton("scissors", L("Couper"), L("Cmd X"), enabled: hasSelection) { model.cutSelection() }
-            iconButton("doc.on.doc", L("Copier"), L("Cmd C"), enabled: hasSelection) { model.copySelection() }
-            iconButton("doc.on.clipboard", L("Coller"), L("Cmd V"),
-                       enabled: inFolder && FileClipboard.shared.canPaste) { model.paste() }
-            iconButton("pencil", L("Renommer"), L("Entree"), enabled: model.selectionCount == 1) {
-                model.beginRenameSelection()
+            ForEach(appSettings.commandBarItems) { item in
+                if CommandBarItem.separatorsBefore.contains(item) { divider }
+                content(for: item)
             }
-            iconButton("square.and.arrow.up", L("Partager"), nil, enabled: hasSelection) {
-                model.shareSelection()
-            }
-            iconButton("trash", L("Placer dans la corbeille"), L("Cmd Suppr"), enabled: hasSelection) {
-                model.trashSelection()
-            }
-
-            divider
-            sortMenu
-            viewMenu
-            moreMenu
 
             Spacer(minLength: 8)
 
@@ -57,6 +40,44 @@ struct CommandBarView: View {
 
     private var divider: some View {
         Divider().frame(height: 18).padding(.horizontal, 4)
+    }
+
+    /// Chaque element de la barre, dans l'ordre choisi par l'utilisateur.
+    @ViewBuilder
+    private func content(for item: CommandBarItem) -> some View {
+        switch item {
+        case .newMenu: newMenu
+        case .cut:
+            iconButton(item.symbol, item.title, L("Cmd X"), enabled: hasSelection) { model.cutSelection() }
+        case .copy:
+            iconButton(item.symbol, item.title, L("Cmd C"), enabled: hasSelection) { model.copySelection() }
+        case .paste:
+            iconButton(item.symbol, item.title, L("Cmd V"),
+                       enabled: inFolder && FileClipboard.shared.canPaste) { model.paste() }
+        case .rename:
+            iconButton(item.symbol, item.title, L("Entree"), enabled: model.selectionCount == 1) {
+                model.beginRenameSelection()
+            }
+        case .share:
+            iconButton(item.symbol, item.title, nil, enabled: hasSelection) { model.shareSelection() }
+        case .trash:
+            iconButton(item.symbol, item.title, L("Cmd Suppr"), enabled: hasSelection) {
+                model.trashSelection()
+            }
+        case .compress:
+            iconButton(item.symbol, item.title, nil, enabled: hasSelection) { model.compressSelection() }
+        case .checksum:
+            iconButton(item.symbol, item.title, nil,
+                       enabled: model.selection.contains { !$0.isDirectory }) { model.showChecksums() }
+        case .terminal:
+            iconButton(item.symbol, item.title, nil,
+                       enabled: model.targetFolder != nil && !TerminalLauncher.installed.isEmpty) {
+                if let first = TerminalLauncher.installed.first { model.openInTerminal(first) }
+            }
+        case .sortMenu: sortMenu
+        case .viewMenu: viewMenu
+        case .moreMenu: moreMenu
+        }
     }
 
     private func iconButton(_ symbol: String, _ title: String, _ shortcut: String?,
@@ -211,6 +232,8 @@ struct CommandBarView: View {
             Divider()
             Button(L("Copier le chemin d'acces")) { model.copySelectionPaths() }.disabled(!hasSelection)
             Button(L("Afficher dans le Finder")) { model.revealInFinder() }
+            Divider()
+            Button(L("Personnaliser la barre de commandes...")) { CommandBarEditorController.show() }
             Divider()
             Menu(L("Tags")) {
                 ForEach(TagManager.knownTags, id: \.self) { tag in
