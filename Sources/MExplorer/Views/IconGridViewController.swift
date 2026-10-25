@@ -214,6 +214,11 @@ final class IconGridViewController: NSViewController, FileAreaController {
         guard let chars = event.charactersIgnoringModifiers, let first = chars.unicodeScalars.first else { return false }
         switch Int(first.value) {
         case 0x20 where flags.isEmpty:
+            // Une espace prolonge une saisie en cours, un nom pouvant en
+            // contenir ; hors saisie, elle reste Coup d'oeil.
+            if typeSelect.isTyping, typeSelect.accept(event) != nil {
+                selectFirst(matching: typeSelect.prefix); return true
+            }
             model.toggleQuickLook(); return true
         case NSCarriageReturnCharacter, NSEnterCharacter:
             model.activate(selectedItems()); return true
@@ -226,8 +231,41 @@ final class IconGridViewController: NSViewController, FileAreaController {
             tab?.goUp(); return true
         case NSDownArrowFunctionKey where flags.contains(.command):
             model.activate(selectedItems()); return true
-        default: return false
+        default:
+            guard typeSelect.accept(event) != nil else { return false }
+            selectFirst(matching: typeSelect.prefix)
+            return true
         }
+    }
+
+    // MARK: - Saisie rapide
+
+    private let typeSelect = TypeSelect()
+
+    /// Selectionne le premier element dont le nom commence par `prefix`.
+    ///
+    /// Repeter la meme lettre fait defiler les elements qui commencent par
+    /// elle : la recherche repart alors de celui qui suit la selection.
+    private func selectFirst(matching prefix: String) {
+        let flat: [(path: IndexPath, name: String)] = sections.enumerated().flatMap { section, content in
+            content.items.enumerated().map { (IndexPath(item: $0.offset, section: section), $0.element.displayName) }
+        }
+        guard !flat.isEmpty else { return }
+
+        var start = 0
+        if typeSelect.isCycling, let current = collectionView.selectionIndexPaths.first,
+           let index = flat.firstIndex(where: { $0.path == current }) {
+            start = index + 1
+        }
+        for offset in 0..<flat.count {
+            let entry = flat[(start + offset) % flat.count]
+            guard entry.name.matchesTypeSelect(prefix: prefix) else { continue }
+            collectionView.selectionIndexPaths = [entry.path]
+            collectionView.scrollToItems(at: [entry.path], scrollPosition: .nearestHorizontalEdge)
+            publishSelection()
+            return
+        }
+        NSSound.beep()
     }
 }
 

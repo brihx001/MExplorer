@@ -83,8 +83,35 @@ enum FileContextMenu {
         }
 
         menu.addItem(.separator())
+        menu.addBlockItem(L("Tout selectionner")) { tab.selectAll() }
+        menu.addBlockItem(L("Inverser la selection")) { tab.invertSelection() }
+        menu.addBlockItem(L("Selectionner par motif...")) { model.promptForSelectionPattern() }
+
+        menu.addItem(.separator())
+        addTerminalItems(to: menu, model: model, folder: model.currentFolder)
         menu.addBlockItem(L("Afficher dans le Finder")) { model.revealInFinder() }
         menu.addBlockItem(L("Proprietes du dossier"), enabled: inFolder) { model.showFolderInfoWindow() }
+    }
+
+    /// « Ouvrir dans le Terminal », au singulier si un seul terminal est
+    /// installe, en sous-menu sinon.
+    private static func addTerminalItems(to menu: NSMenu, model: WindowModel, folder: URL?) {
+        guard folder ?? model.currentFolder != nil else { return }
+        let terminals = TerminalLauncher.installed
+        guard !terminals.isEmpty else { return }
+        if terminals.count == 1, let only = terminals.first {
+            menu.addBlockItem(L("Ouvrir dans le Terminal"), symbol: "terminal") {
+                model.openInTerminal(only)
+            }
+            return
+        }
+        let sub = NSMenu()
+        for terminal in terminals {
+            sub.addBlockItem(terminal.name) { model.openInTerminal(terminal) }
+        }
+        let item = NSMenuItem(title: L("Ouvrir dans le Terminal"), action: nil, keyEquivalent: "")
+        item.submenu = sub
+        menu.addItem(item)
     }
 
     // MARK: - Clic sur une selection
@@ -149,6 +176,12 @@ enum FileContextMenu {
             }
         }
         menu.addBlockItem(L("Copier le chemin d'acces")) { model.copySelectionPaths() }
+        let copyAs = NSMenu()
+        copyAs.addBlockItem(L("Nom seul")) { model.copySelectionNames() }
+        copyAs.addBlockItem(L("URL de fichier")) { model.copySelectionFileURLs() }
+        let copyAsItem = NSMenuItem(title: L("Copier sous la forme"), action: nil, keyEquivalent: "")
+        copyAsItem.submenu = copyAs
+        menu.addItem(copyAsItem)
 
         menu.addItem(.separator())
         menu.addBlockItem(L("Renommer"), enabled: items.count == 1, symbol: "pencil") {
@@ -157,6 +190,10 @@ enum FileContextMenu {
         menu.addBlockItem(L("Dupliquer"), symbol: "plus.square.on.square") { model.duplicateSelection() }
         menu.addBlockItem(L("Creer un alias"), symbol: "arrowshape.turn.up.left") { model.makeAliasForSelection() }
         menu.addBlockItem(L("Compresser"), symbol: "archivebox") { model.compressSelection() }
+        if items.contains(where: { !$0.isDirectory }) {
+            menu.addBlockItem(L("Somme de controle..."), symbol: "number") { model.showChecksums() }
+        }
+        addTerminalItems(to: menu, model: model, folder: single?.isNavigableContainer == true ? single?.url : nil)
 
         menu.addItem(.separator())
         let tagsMenu = NSMenu()

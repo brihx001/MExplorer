@@ -520,6 +520,31 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         onRequestSelection?(selectedURLs)
     }
 
+    /// Inverse la selection : ce qui etait pris est relache, le reste est pris.
+    /// Ne porte que sur les lignes visibles, filtre compris : inverser dans un
+    /// dossier filtre ne doit pas ramener ce que le filtre ecarte.
+    func invertSelection() {
+        let current = Set(selectedURLs.map(\.path))
+        selectedURLs = rows.compactMap { $0.item?.url }.filter { !current.contains($0.path) }
+        onRequestSelection?(selectedURLs)
+    }
+
+    /// Selectionne les elements dont le nom correspond au motif, avec les
+    /// jokers du shell (`*` et `?`). `LIKE` de NSPredicate les comprend
+    /// exactement ainsi, casse et accents ignores.
+    @discardableResult
+    func selectMatching(pattern: String) -> Int {
+        let trimmed = pattern.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return 0 }
+        let predicate = NSPredicate(format: "SELF LIKE[cd] %@", trimmed)
+        let matched = rows.compactMap { $0.item }
+            .filter { predicate.evaluate(with: $0.displayName) }
+            .map(\.url)
+        selectedURLs = matched
+        onRequestSelection?(selectedURLs)
+        return matched.count
+    }
+
     // MARK: - Taille de dossier a la demande
 
     func computeSize(for item: FileItem, completion: @escaping (Int64) -> Void) {

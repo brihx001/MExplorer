@@ -38,9 +38,16 @@ final class FileClipboard {
     }
 
     func copyPaths(_ urls: [URL]) {
+        copyText(urls.map(\.path))
+    }
+
+    /// Texte seul, sans URL de fichier : le presse-papiers ne doit pas passer
+    /// pour une selection de fichiers quand on ne copie que des libelles.
+    func copyText(_ lines: [String]) {
+        guard !lines.isEmpty else { return }
         let pb = NSPasteboard.general
         pb.clearContents()
-        pb.setString(urls.map(\.path).joined(separator: "\n"), forType: .string)
+        pb.setString(lines.joined(separator: "\n"), forType: .string)
     }
 
     // MARK: - Lecture

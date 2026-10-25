@@ -45,6 +45,13 @@ final class AppSettings: ObservableObject {
         set { d.set(newValue, forKey: "showPreviewPane") }
     }
 
+    /// Dernier motif de selection saisi, repropose au prochain appel : on
+    /// affine rarement du premier coup.
+    var lastSelectionPattern: String {
+        get { d.string(forKey: "lastSelectionPattern") ?? "" }
+        set { d.set(newValue, forKey: "lastSelectionPattern") }
+    }
+
     /// L'utilisateur a demande a ne plus voir la proposition d'acces au disque.
     var skipDiskAccessPrompt: Bool {
         get { Self.flag("skipDiskAccessPrompt", false) }

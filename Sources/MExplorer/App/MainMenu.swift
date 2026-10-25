@@ -141,6 +141,27 @@ enum MainMenu {
                 enabled: { model?.selection.isEmpty == false }) { model?.deleteSelectionPermanently() }
             add(menu, L("Vider la corbeille...")) { model?.emptyTrash() }
             menu.addItem(.separator())
+            add(menu, L("Somme de controle..."),
+                enabled: { model?.selection.contains { !$0.isDirectory } == true }) {
+                model?.showChecksums()
+            }
+            let terminals = TerminalLauncher.installed
+            if terminals.count == 1, let only = terminals.first {
+                add(menu, L("Ouvrir dans le Terminal"), "t", [.command, .control]) {
+                    model?.openInTerminal(only)
+                }
+            } else if terminals.count > 1 {
+                let item = NSMenuItem(title: L("Ouvrir dans le Terminal"), action: nil, keyEquivalent: "")
+                let sub = NSMenu(title: L("Ouvrir dans le Terminal"))
+                for (index, terminal) in terminals.enumerated() {
+                    add(sub, terminal.name, index == 0 ? "t" : "", [.command, .control]) {
+                        model?.openInTerminal(terminal)
+                    }
+                }
+                item.submenu = sub
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
             add(menu, L("Afficher dans le Finder")) { model?.revealInFinder() }
         }
     }
@@ -159,11 +180,22 @@ enum MainMenu {
             add(menu, L("Copier"), "c", enabled: { model?.selection.isEmpty == false }) { model?.copySelection() }
             add(menu, L("Copier le chemin d'acces"), "c", [.command, .shift, .option],
                 enabled: { model?.selection.isEmpty == false }) { model?.copySelectionPaths() }
+            let copyAs = NSMenuItem(title: L("Copier sous la forme"), action: nil, keyEquivalent: "")
+            let copyAsMenu = NSMenu(title: L("Copier sous la forme"))
+            add(copyAsMenu, L("Nom seul"),
+                enabled: { model?.selection.isEmpty == false }) { model?.copySelectionNames() }
+            add(copyAsMenu, L("URL de fichier"),
+                enabled: { model?.selection.isEmpty == false }) { model?.copySelectionFileURLs() }
+            copyAs.submenu = copyAsMenu
+            menu.addItem(copyAs)
             add(menu, L("Coller"), "v", enabled: { FileClipboard.shared.canPaste }) { model?.paste() }
             add(menu, L("Coller un raccourci"), "v", [.command, .shift],
                 enabled: { FileClipboard.shared.canPaste }) { model?.pasteShortcut() }
             menu.addItem(.separator())
             add(menu, L("Tout selectionner"), "a") { tab?.selectAll() }
+            add(menu, L("Inverser la selection"), "i", [.command, .shift]) { model?.invertSelection() }
+            // Sans raccourci : Cmd Maj A est deja « Aller > Applications ».
+            add(menu, L("Selectionner par motif...")) { model?.promptForSelectionPattern() }
             add(menu, L("Renommer"), fn(NSF2FunctionKey), [],
                 enabled: { model?.selection.count == 1 }) { model?.beginRenameSelection() }
             menu.addItem(.separator())

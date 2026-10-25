@@ -248,6 +248,75 @@ final class WindowModel: ObservableObject {
     func cutSelection() { FileClipboard.shared.cut(selectionURLs) }
     func copySelectionPaths() { FileClipboard.shared.copyPaths(selectionURLs) }
 
+    /// Chemins sous forme d'URL `file://`, pour ce qui attend une URL plutot
+    /// qu'un chemin POSIX (navigateur, champ de configuration).
+    func copySelectionFileURLs() {
+        FileClipboard.shared.copyText(selectionURLs.map { $0.absoluteString })
+    }
+
+    /// Noms seuls, sans le dossier qui les porte.
+    func copySelectionNames() {
+        FileClipboard.shared.copyText(selectionURLs.map(\.lastPathComponent))
+    }
+
+    // MARK: - Selection
+
+    func invertSelection() { activeTab.invertSelection() }
+
+    /// Demande un motif puis selectionne ce qui lui correspond.
+    func promptForSelectionPattern() {
+        let alert = NSAlert()
+        alert.messageText = L("Selectionner par motif")
+        alert.informativeText = L("Utilisez * pour une suite de caracteres et ? pour un seul. Exemple : *.jpg")
+        alert.addButton(withTitle: L("Selectionner"))
+        alert.addButton(withTitle: L("Annuler", context: "bouton"))
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.placeholderString = "*.jpg"
+        field.stringValue = lastSelectionPattern
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        let run: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            let pattern = field.stringValue
+            self.lastSelectionPattern = pattern
+            let count = self.activeTab.selectMatching(pattern: pattern)
+            if count == 0 { NSSound.beep() }
+        }
+        if let window, window.isVisible {
+            alert.beginSheetModal(for: window, completionHandler: run)
+        } else {
+            run(alert.runModal())
+        }
+    }
+
+    /// Le motif precedent est repropose : on affine rarement du premier coup.
+    private var lastSelectionPattern: String {
+        get { AppSettings.shared.lastSelectionPattern }
+        set { AppSettings.shared.lastSelectionPattern = newValue }
+    }
+
+    // MARK: - Terminal et sommes de controle
+
+    /// Dossier sur lequel agir : celui qui est selectionne, sinon le courant.
+    var targetFolder: URL? {
+        if let item = selection.first, item.isNavigableContainer { return item.url }
+        return currentFolder
+    }
+
+    func openInTerminal(_ app: TerminalLauncher.App) {
+        guard let folder = targetFolder else { return }
+        TerminalLauncher.open(folder, with: app) { [weak self] error in
+            if let error { self?.present(error) }
+        }
+    }
+
+    func showChecksums() {
+        let files = selection.filter { !$0.isDirectory }.map(\.url)
+        guard !files.isEmpty else { NSSound.beep(); return }
+        ChecksumWindowController.show(for: files)
+    }
+
     func paste() {
         guard let folder = currentFolder else { return }
         FileClipboard.shared.paste(into: folder, undoManager: undoManager) { [weak self] _, error in
