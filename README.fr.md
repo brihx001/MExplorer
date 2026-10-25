@@ -13,9 +13,11 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.6.0](https://github.com/brihx001/MExplorer/releases/tag/v0.6.0)**
-— renommage par lot, copies annulables, archives, occupation et doublons,
-colonnes de droits Unix, et fenetres qui reviennent ou on les a laissees.
+**Derniere version : [v0.6.1](https://github.com/brihx001/MExplorer/releases/tag/v0.6.1)**
+— ajoute un bouton Actualiser a la barre de commandes ; la 0.6.0 a apporte le
+renommage par lot, les copies annulables, les archives, l'occupation et les
+doublons, les colonnes de droits Unix, et les fenetres qui reviennent ou on
+les a laissees.
 
 ## Prerequis
 
