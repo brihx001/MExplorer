@@ -134,6 +134,8 @@ enum MainMenu {
             add(menu, L("Compresser"), enabled: { model?.selection.isEmpty == false }) {
                 model?.compressSelection()
             }
+            menu.addItem(transferSubmenu(kind: .move, title: L("Deplacer vers")))
+            menu.addItem(transferSubmenu(kind: .copy, title: L("Copier vers")))
             menu.addItem(.separator())
             add(menu, L("Placer dans la corbeille"), fn(NSDeleteCharacter), [.command],
                 enabled: { model?.selection.isEmpty == false }) { model?.trashSelection() }
@@ -164,6 +166,17 @@ enum MainMenu {
             menu.addItem(.separator())
             add(menu, L("Afficher dans le Finder")) { model?.revealInFinder() }
         }
+    }
+
+    /// « Deplacer vers » / « Copier vers » : favoris et destinations
+    /// recentes, puis le selecteur systeme. Le menu est rebati a chaque
+    /// ouverture, les destinations recentes changeant a l'usage.
+    private static func transferSubmenu(kind: FileOperations.TransferKind, title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        let menu = NSMenu(title: title)
+        menu.delegate = TransferMenuDelegate.shared(for: kind)
+        item.submenu = menu
+        return item
     }
 
     private static func editMenu() -> NSMenuItem {
@@ -198,6 +211,8 @@ enum MainMenu {
             add(menu, L("Selectionner par motif...")) { model?.promptForSelectionPattern() }
             add(menu, L("Renommer"), fn(NSF2FunctionKey), [],
                 enabled: { model?.selection.count == 1 }) { model?.beginRenameSelection() }
+            add(menu, L("Renommer par lot..."), fn(NSF2FunctionKey), [.shift],
+                enabled: { (model?.selection.count ?? 0) > 1 }) { model?.showBatchRename() }
             menu.addItem(.separator())
             add(menu, L("Rechercher"), "f") { model?.focusSearch() }
             add(menu, L("Aller au dossier..."), "l") { model?.isAddressBarEditing = true }

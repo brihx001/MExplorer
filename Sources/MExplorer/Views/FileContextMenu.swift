@@ -93,6 +93,30 @@ enum FileContextMenu {
         menu.addBlockItem(L("Proprietes du dossier"), enabled: inFolder) { model.showFolderInfoWindow() }
     }
 
+    /// « Deplacer vers » et « Copier vers » : favoris et destinations
+    /// recentes, puis le selecteur systeme.
+    private static func addTransferItems(to menu: NSMenu, model: WindowModel) {
+        let destinations = model.transferDestinations()
+        for (kind, title) in [(FileOperations.TransferKind.move, L("Deplacer vers")),
+                              (FileOperations.TransferKind.copy, L("Copier vers"))] {
+            let sub = NSMenu()
+            for destination in destinations {
+                let item = sub.addBlockItem(destination.lastPathComponent) {
+                    model.transferSelection(to: destination, kind: kind)
+                }
+                let icon = NSWorkspace.shared.icon(forFile: destination.path)
+                icon.size = NSSize(width: 16, height: 16)
+                item.image = icon
+                item.toolTip = destination.path
+            }
+            if !destinations.isEmpty { sub.addItem(.separator()) }
+            sub.addBlockItem(L("Autre dossier...")) { model.chooseTransferDestination(kind: kind) }
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.submenu = sub
+            menu.addItem(item)
+        }
+    }
+
     /// « Ouvrir dans le Terminal », au singulier si un seul terminal est
     /// installe, en sous-menu sinon.
     private static func addTerminalItems(to menu: NSMenu, model: WindowModel, folder: URL?) {
@@ -187,6 +211,10 @@ enum FileContextMenu {
         menu.addBlockItem(L("Renommer"), enabled: items.count == 1, symbol: "pencil") {
             model.beginRenameSelection()
         }
+        menu.addBlockItem(L("Renommer par lot..."), enabled: items.count > 1, symbol: "textformat") {
+            model.showBatchRename()
+        }
+        addTransferItems(to: menu, model: model)
         menu.addBlockItem(L("Dupliquer"), symbol: "plus.square.on.square") { model.duplicateSelection() }
         menu.addBlockItem(L("Creer un alias"), symbol: "arrowshape.turn.up.left") { model.makeAliasForSelection() }
         menu.addBlockItem(L("Compresser"), symbol: "archivebox") { model.compressSelection() }

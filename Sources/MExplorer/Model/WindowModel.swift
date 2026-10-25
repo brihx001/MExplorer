@@ -296,6 +296,68 @@ final class WindowModel: ObservableObject {
         set { AppSettings.shared.lastSelectionPattern = newValue }
     }
 
+    // MARK: - Deplacer vers / Copier vers
+
+    /// Destinations proposees : les favoris de l'acces rapide, puis les
+    /// dossiers vises recemment, sans doublon ni dossier disparu.
+    func transferDestinations() -> [URL] {
+        let fm = FileManager.default
+        var seen = Set<String>()
+        var list: [URL] = []
+        let candidates = AppSettings.shared.favoritePaths + AppSettings.shared.recentDestinations
+        for path in candidates {
+            var isDirectory: ObjCBool = false
+            guard fm.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue,
+                  path != currentFolder?.standardizedFileURL.path,
+                  seen.insert(path).inserted else { continue }
+            list.append(URL(fileURLWithPath: path))
+        }
+        return list
+    }
+
+    func transferSelection(to destination: URL, kind: FileOperations.TransferKind) {
+        let urls = selectionURLs
+        guard !urls.isEmpty else { return }
+        AppSettings.shared.rememberDestination(destination)
+        FileOperations.shared.transfer(urls, to: destination, kind: kind,
+                                       undoManager: undoManager) { [weak self] _, error in
+            if let error { self?.present(error) }
+        }
+    }
+
+    /// Ouvre le selecteur systeme : il vaut aussi autorisation d'acces au
+    /// dossier choisi, ce que le bac a sable exige pour y ecrire.
+    func chooseTransferDestination(kind: FileOperations.TransferKind) {
+        guard !selectionURLs.isEmpty else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = kind == .copy ? L("Copier ici") : L("Deplacer ici")
+        panel.message = kind == .copy
+            ? L("Choisissez le dossier ou copier la selection.")
+            : L("Choisissez le dossier ou deplacer la selection.")
+        let run: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            AccessManager.shared.register(url)
+            self?.transferSelection(to: url, kind: kind)
+        }
+        if let window, window.isVisible {
+            panel.beginSheetModal(for: window, completionHandler: run)
+        } else {
+            run(panel.runModal())
+        }
+    }
+
+    // MARK: - Renommage par lot
+
+    func showBatchRename() {
+        let urls = selectionURLs
+        guard urls.count > 1 else { NSSound.beep(); return }
+        BatchRenameWindowController.show(for: urls, model: self)
+    }
+
     // MARK: - Terminal et sommes de controle
 
     /// Dossier sur lequel agir : celui qui est selectionne, sinon le courant.

@@ -45,6 +45,21 @@ final class AppSettings: ObservableObject {
         set { d.set(newValue, forKey: "showPreviewPane") }
     }
 
+    /// Dossiers vises recemment par « Deplacer vers » ou « Copier vers »,
+    /// du plus recent au plus ancien. Dix suffisent : au-dela, le sous-menu
+    /// devient une liste a lire plutot qu'un raccourci.
+    var recentDestinations: [String] {
+        get { d.stringArray(forKey: "recentDestinations") ?? [] }
+        set { d.set(Array(newValue.prefix(10)), forKey: "recentDestinations") }
+    }
+
+    func rememberDestination(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        var list = recentDestinations.filter { $0 != path }
+        list.insert(path, at: 0)
+        recentDestinations = list
+    }
+
     /// Dernier motif de selection saisi, repropose au prochain appel : on
     /// affine rarement du premier coup.
     var lastSelectionPattern: String {
