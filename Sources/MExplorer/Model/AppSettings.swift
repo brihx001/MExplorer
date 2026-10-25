@@ -68,6 +68,28 @@ final class AppSettings: ObservableObject {
 
     static let commandBarChanged = Notification.Name("com.jerome.mexplorer.commandBarChanged")
 
+    /// Ajoute une fois a une barre deja personnalisee les boutons apparus
+    /// depuis son reglage.
+    ///
+    /// Sans cela, qui a touche a la barre ne verrait jamais les boutons des
+    /// versions suivantes. Ils sont poses a la fin, avant les trois menus pour
+    /// que ceux-ci restent au bout, et peuvent etre retires comme les autres.
+    func migrateCommandBar() {
+        guard d.object(forKey: "commandBarItems") != nil else { return }
+        let seen = d.integer(forKey: "commandBarVersion")
+        guard seen < CommandBarItem.version else { return }
+        var items = commandBarItems
+        let missing = CommandBarItem.defaults.filter { !items.contains($0) }
+        if !missing.isEmpty {
+            let menus = items.filter { CommandBarItem.trailingMenus.contains($0) }
+            items.removeAll { CommandBarItem.trailingMenus.contains($0) }
+            items.append(contentsOf: missing.filter { !CommandBarItem.trailingMenus.contains($0) })
+            items.append(contentsOf: menus)
+            commandBarItems = items
+        }
+        d.set(CommandBarItem.version, forKey: "commandBarVersion")
+    }
+
     func resetCommandBar() { commandBarItems = CommandBarItem.defaults }
 
     /// Dossiers vises recemment par « Deplacer vers » ou « Copier vers »,

@@ -74,6 +74,8 @@ struct CommandBarView: View {
                        enabled: model.targetFolder != nil && !TerminalLauncher.installed.isEmpty) {
                 if let first = TerminalLauncher.installed.first { model.openInTerminal(first) }
             }
+        case .refresh:
+            iconButton(item.symbol, item.title, L("Cmd R"), enabled: true) { tab.reload() }
         case .sortMenu: sortMenu
         case .viewMenu: viewMenu
         case .moreMenu: moreMenu

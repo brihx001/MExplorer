@@ -9,7 +9,7 @@ import Foundation
 enum CommandBarItem: String, CaseIterable, Identifiable, Codable {
 
     case newMenu, cut, copy, paste, rename, share, trash
-    case compress, checksum, terminal
+    case compress, checksum, terminal, refresh
     case sortMenu, viewMenu, moreMenu
 
     var id: String { rawValue }
@@ -26,6 +26,7 @@ enum CommandBarItem: String, CaseIterable, Identifiable, Codable {
         case .compress: return L("Compresser")
         case .checksum: return L("Somme de controle")
         case .terminal: return L("Ouvrir dans le Terminal")
+        case .refresh: return L("Actualiser")
         case .sortMenu: return L("Trier par")
         case .viewMenu: return L("Affichage")
         case .moreMenu: return L("Plus")
@@ -44,6 +45,7 @@ enum CommandBarItem: String, CaseIterable, Identifiable, Codable {
         case .compress: return "archivebox"
         case .checksum: return "number"
         case .terminal: return "terminal"
+        case .refresh: return "arrow.clockwise"
         case .sortMenu: return "arrow.up.arrow.down"
         case .viewMenu: return "list.bullet"
         case .moreMenu: return "ellipsis"
@@ -60,9 +62,17 @@ enum CommandBarItem: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Incrementee des qu'un bouton rejoint la composition d'origine : une
+    /// barre deja personnalisee le recoit alors une fois.
+    static let version = 2
+
+    /// Menus qui restent au bout de la barre.
+    static let trailingMenus: Set<CommandBarItem> = [.sortMenu, .viewMenu, .moreMenu]
+
     /// Composition d'origine, celle de l'Explorateur de Windows 11.
     static let defaults: [CommandBarItem] = [
-        .newMenu, .cut, .copy, .paste, .rename, .share, .trash, .sortMenu, .viewMenu, .moreMenu
+        .newMenu, .cut, .copy, .paste, .rename, .share, .trash, .refresh,
+        .sortMenu, .viewMenu, .moreMenu
     ]
 
     /// Separateur dessine avant cet element dans la barre d'origine.

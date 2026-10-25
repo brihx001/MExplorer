@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         L10n.apply(AppSettings.shared.language)
         AppSettings.shared.theme.apply()
         AppSettings.shared.addApplicationsFavoriteOnce()
+        AppSettings.shared.migrateCommandBar()
         // Les menus sont construits une fois : il faut les refaire quand la
         // langue change.
         NotificationCenter.default.addObserver(forName: L10n.changed, object: nil, queue: .main) { _ in
