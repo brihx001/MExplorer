@@ -29,7 +29,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         window.titleVisibility = .hidden
         window.tabbingMode = .disallowed
         window.isReleasedWhenClosed = false
-        window.setFrameAutosaveName("MExplorerMainWindow")
+        // Pas de setFrameAutosaveName : il enregistre le cadre mais ne le
+        // repose jamais de lui-meme, et un nom unique ne saurait de toute
+        // facon pas distinguer plusieurs fenetres. La session s'en charge,
+        // fenetre par fenetre.
+        window.center()
 
         super.init(window: window)
 
@@ -76,7 +80,29 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     // MARK: - NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {
+        // La derniere fenetre fermee fait quitter l'application : son etat doit
+        // etre note maintenant, car applicationWillTerminate ne trouverait
+        // plus de fenetre a enregistrer.
+        SessionStore.save(closing: self)
         WindowManager.shared.forget(self)
+    }
+
+    /// Repose la fenetre la ou elle etait, si l'endroit existe toujours.
+    func restoreFrame(_ frame: NSRect) {
+        guard let window else { return }
+        var target = frame
+        target.size.width = max(target.width, window.minSize.width)
+        target.size.height = max(target.height, window.minSize.height)
+        guard SessionStore.isReachable(target) else { return }
+        window.setFrame(target, display: false)
+    }
+
+    /// Decale la fenetre par rapport a la precedente, faute de cadre connu :
+    /// sans cela, toutes les fenetres d'une session se superposeraient.
+    func cascade(after previous: BrowserWindowController?) {
+        guard let window else { return }
+        guard let origin = previous?.window?.frame else { window.center(); return }
+        window.cascadeTopLeft(from: NSPoint(x: origin.minX, y: origin.maxY))
     }
 
     func windowDidBecomeKey(_ notification: Notification) {

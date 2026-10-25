@@ -134,6 +134,13 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Cadre de chaque fenetre de la session, dans l'ordre de
+    /// `lastSessionWindows`, ecrit par NSStringFromRect.
+    var lastSessionFrames: [String] {
+        get { d.stringArray(forKey: "lastSessionFrames") ?? [] }
+        set { d.set(newValue, forKey: "lastSessionFrames") }
+    }
+
     /// Nombre de visites par dossier, pour la section « Dossiers frequents ».
     ///
     /// Les compteurs sont divises par deux quand le total s'emballe : un

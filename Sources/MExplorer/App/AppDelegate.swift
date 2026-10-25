@@ -46,36 +46,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Session
 
     /// Reouvre toutes les fenetres de la session precedente, chacune avec ses
-    /// onglets. Les dossiers disparus entre deux lancements sont ecartes, et
-    /// une fenetre qui n'en garderait aucun n'est pas rouverte.
+    /// onglets et a l'endroit ou elle se trouvait.
     private func restoreSession() {
-        let windows = AppSettings.shared.lastSessionWindows
-            .map { paths in
-                paths.map { URL(fileURLWithPath: $0) }
-                    .filter { FileManager.default.fileExists(atPath: $0.path) }
-            }
-            .filter { !$0.isEmpty }
+        let windows = SessionStore.restore()
 
         guard !windows.isEmpty else {
             WindowManager.shared.openWindow(at: .folder(SidebarCatalog.home))
             promptForInitialAccessIfNeeded()
             return
         }
-        for urls in windows {
-            let controller = WindowManager.shared.openWindow(at: .folder(urls[0]))
-            for url in urls.dropFirst() {
+        var previous: BrowserWindowController?
+        for window in windows {
+            let controller = WindowManager.shared.openWindow(at: .folder(window.urls[0]))
+            for url in window.urls.dropFirst() {
                 controller.model.newTab(at: .folder(url), select: false)
             }
             controller.model.selectTab(at: 0)
+            if let frame = window.frame {
+                controller.restoreFrame(frame)
+            } else {
+                controller.cascade(after: previous)
+            }
+            previous = controller
         }
         promptForInitialAccessIfNeeded()
     }
 
     private func saveSession() {
-        let windows = WindowManager.shared.controllers.map { controller in
-            controller.model.tabs.compactMap { $0.location.folderURL?.path }
-        }
-        AppSettings.shared.lastSessionWindows = windows.filter { !$0.isEmpty }
+        SessionStore.save()
+        // Les fenetres se fermeront apres ce point : la session est figee pour
+        // qu'aucune ne la reduise a elle seule.
+        SessionStore.seal()
     }
 
     /// Propose, au lancement, d'autoriser l'ensemble du disque.
