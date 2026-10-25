@@ -192,6 +192,40 @@ the project (entitlements, bookmarks, no private API) is ready for it.
 - Deletion with **Del** (trash) and **Shift Del** (permanent), rename with
   **F2**, refresh with **F5**.
 
+- **Batch rename** of several items at once: replace text, add a prefix or a
+  suffix, number, change case. The preview shows the proposed names as you
+  type, and collisions are flagged in red, within the batch as well as against
+  what is already on disk.
+- **Cancellable copies**, with progress counted in bytes. `copyfile(3)` reports
+  every megabyte and can be told to stop, where `FileManager.copyItem` only
+  returns once the whole file is copied. The `COPYFILE_CLONE` flag keeps the
+  fast path: within an APFS volume a copy is still an instant clone and no byte
+  travels.
+- **Move to / Copy to**, listing quick-access favourites and the last ten
+  destinations used, plus a folder chooser.
+- **Name conflicts** are settled item by item, with *Skip* and an *Apply to the
+  next N items* box, as in the Finder.
+- **Archives**: open one as a folder, extract it in place, or extract it
+  elsewhere. .zip, .tar and compressed tars.
+- **Type-ahead** in the icon grid too, not only in the list.
+- **Invert selection** and **select by pattern**, with the shell's wildcards.
+- **Copy as** a name or a file URL, beside the POSIX path.
+- **Open in Terminal**: Terminal.app, iTerm, Warp, Hyper, kitty, WezTerm and
+  Ghostty are looked for each time the menu opens.
+- **Checksums** (SHA-256, SHA-1, MD5), compared against a pasted value.
+- **Folder usage**: what weighs, the fifty largest files, and duplicates, from
+  a single cancellable walk.
+- **Frequent folders** in the sidebar, after three visits.
+- **Editable POSIX permissions** in the info window, leaving the execute bits
+  alone.
+- **Icon badges** for aliases, symbolic links and locked items.
+- **iCloud column**, read on demand so the folder load stays fast.
+- **Always open with**, for every file of the same type.
+- **Path completion** on Tab in the address field, and the history under a long
+  press on Back or Forward.
+- **A customisable command bar**: which buttons appear, and in which order.
+- **Every window** is reopened at launch, each with its tabs.
+
 ### Native Finder services
 
 - **Quick Look** (space bar) with an animation from the thumbnail, and

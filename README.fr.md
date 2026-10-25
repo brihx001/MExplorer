@@ -194,6 +194,42 @@ pour cela.
 - Suppression via **Suppr** (corbeille) et **Maj Suppr** (definitive),
   renommage via **F2**, actualisation via **F5**.
 
+- **Renommage par lot** : remplacement de texte, prefixe, suffixe,
+  numerotation, changement de casse. L'apercu montre les noms proposes au fur
+  et a mesure de la saisie, et les collisions sont signalees en rouge, dans le
+  lot comme avec ce qui est deja sur le disque.
+- **Copies annulables**, avec progression en octets. `copyfile(3)` rend compte
+  tous les mega-octets et accepte qu'on l'arrete, la ou `FileManager.copyItem`
+  ne rend la main qu'une fois le fichier entier copie. Le drapeau
+  `COPYFILE_CLONE` garde le chemin rapide : au sein d'un volume APFS la copie
+  reste un clone instantane et aucun octet ne circule.
+- **Deplacer vers / Copier vers**, avec les favoris de l'acces rapide, les dix
+  dernieres destinations et un selecteur de dossier.
+- **Conflits de nom** tranches element par element, avec « Ignorer » et une
+  case « Appliquer aux N elements suivants », comme le Finder.
+- **Archives** : ouvrir comme un dossier, extraire ici, extraire ailleurs.
+  .zip, .tar et les tar compresses.
+- **Saisie rapide** dans la grille d'icones aussi, et plus seulement en liste.
+- **Inverser la selection** et **selectionner par motif**, avec les jokers du
+  shell.
+- **Copier sous la forme** d'un nom ou d'une URL de fichier, a cote du chemin
+  POSIX.
+- **Ouvrir dans le Terminal** : Terminal.app, iTerm, Warp, Hyper, kitty,
+  WezTerm et Ghostty sont cherches a chaque ouverture du menu.
+- **Sommes de controle** (SHA-256, SHA-1, MD5), comparees a une valeur collee.
+- **Occupation du dossier** : ce qui pese, les cinquante plus gros fichiers et
+  les doublons, en un seul parcours annulable.
+- **Dossiers frequents** dans la barre laterale, des la troisieme visite.
+- **Permissions POSIX editables** dans la fenetre d'informations, sans toucher
+  aux bits d'execution.
+- **Pastilles** sur les icones : alias, lien symbolique, verrou.
+- **Colonne iCloud**, lue a la demande pour ne pas ralentir le chargement.
+- **Toujours ouvrir avec**, pour tous les fichiers de meme type.
+- **Completion de chemin** a la tabulation, et historique au clic maintenu sur
+  Precedent ou Suivant.
+- **Barre de commandes personnalisable** : quels boutons, dans quel ordre.
+- **Toutes les fenetres** sont rouvertes au lancement, chacune avec ses onglets.
+
 ### Services natifs du Finder
 
 - **Coup d'oeil** (barre d'espace) avec animation depuis la vignette, et
