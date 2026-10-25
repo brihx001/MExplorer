@@ -45,27 +45,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Session
 
+    /// Reouvre toutes les fenetres de la session precedente, chacune avec ses
+    /// onglets. Les dossiers disparus entre deux lancements sont ecartes, et
+    /// une fenetre qui n'en garderait aucun n'est pas rouverte.
     private func restoreSession() {
-        let paths = AppSettings.shared.lastSessionPaths
-        let existing = paths.map { URL(fileURLWithPath: $0) }
-            .filter { FileManager.default.fileExists(atPath: $0.path) }
+        let windows = AppSettings.shared.lastSessionWindows
+            .map { paths in
+                paths.map { URL(fileURLWithPath: $0) }
+                    .filter { FileManager.default.fileExists(atPath: $0.path) }
+            }
+            .filter { !$0.isEmpty }
 
-        guard let first = existing.first else {
+        guard !windows.isEmpty else {
             WindowManager.shared.openWindow(at: .folder(SidebarCatalog.home))
             promptForInitialAccessIfNeeded()
             return
         }
-        let controller = WindowManager.shared.openWindow(at: .folder(first))
-        for url in existing.dropFirst() {
-            controller.model.newTab(at: .folder(url), select: false)
+        for urls in windows {
+            let controller = WindowManager.shared.openWindow(at: .folder(urls[0]))
+            for url in urls.dropFirst() {
+                controller.model.newTab(at: .folder(url), select: false)
+            }
+            controller.model.selectTab(at: 0)
         }
-        controller.model.selectTab(at: 0)
         promptForInitialAccessIfNeeded()
     }
 
     private func saveSession() {
-        guard let model = WindowManager.shared.controllers.first?.model else { return }
-        AppSettings.shared.lastSessionPaths = model.tabs.compactMap { $0.location.folderURL?.path }
+        let windows = WindowManager.shared.controllers.map { controller in
+            controller.model.tabs.compactMap { $0.location.folderURL?.path }
+        }
+        AppSettings.shared.lastSessionWindows = windows.filter { !$0.isEmpty }
     }
 
     /// Propose, au lancement, d'autoriser l'ensemble du disque.

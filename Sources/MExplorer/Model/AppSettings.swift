@@ -73,10 +73,87 @@ final class AppSettings: ObservableObject {
         set { d.set(newValue, forKey: "skipDiskAccessPrompt") }
     }
 
-    /// Session restauree au lancement : liste des chemins ouverts par onglet.
-    var lastSessionPaths: [String] {
-        get { d.stringArray(forKey: "lastSessionPaths") ?? [] }
-        set { d.set(newValue, forKey: "lastSessionPaths") }
+    /// Session restauree au lancement : une liste de chemins par fenetre.
+    ///
+    /// Les listes sont aplaties pour UserDefaults, qui ne stocke pas de
+    /// tableau de tableaux de maniere lisible : une chaine vide separe deux
+    /// fenetres. Un chemin etant toujours absolu, il ne peut pas etre vide.
+    var lastSessionWindows: [[String]] {
+        get {
+            let flat = d.stringArray(forKey: "lastSessionWindows") ?? []
+            if flat.isEmpty {
+                // Reprise de l'ancien reglage, qui ne gardait qu'une fenetre.
+                let legacy = d.stringArray(forKey: "lastSessionPaths") ?? []
+                return legacy.isEmpty ? [] : [legacy]
+            }
+            var windows: [[String]] = []
+            var current: [String] = []
+            for entry in flat {
+                if entry.isEmpty {
+                    windows.append(current)
+                    current = []
+                } else {
+                    current.append(entry)
+                }
+            }
+            if !current.isEmpty { windows.append(current) }
+            return windows
+        }
+        set {
+            var flat: [String] = []
+            for (index, window) in newValue.enumerated() {
+                if index > 0 { flat.append("") }
+                flat.append(contentsOf: window)
+            }
+            d.set(flat, forKey: "lastSessionWindows")
+        }
+    }
+
+    /// Nombre de visites par dossier, pour la section « Dossiers frequents ».
+    ///
+    /// Les compteurs sont divises par deux quand le total s'emballe : un
+    /// dossier tres visite il y a six mois ne doit pas rester en tete pour
+    /// toujours.
+    var folderVisits: [String: Int] {
+        get { (d.dictionary(forKey: "folderVisits") as? [String: Int]) ?? [:] }
+        set { d.set(newValue, forKey: "folderVisits") }
+    }
+
+    func recordVisit(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        // Le dossier personnel et la racine faussent le classement : on y
+        // passe pour aller ailleurs.
+        guard path != SidebarCatalog.home.path, path != "/" else { return }
+        var visits = folderVisits
+        visits[path, default: 0] += 1
+        if visits.values.reduce(0, +) > 2000 {
+            visits = visits.compactMapValues { $0 / 2 }.filter { $0.value > 0 }
+        }
+        let before = frequentFolders()
+        folderVisits = visits
+        // La barre laterale n'est refaite que si le classement a bouge :
+        // la rebatir a chaque navigation replierait l'arborescence.
+        if frequentFolders() != before {
+            NotificationCenter.default.post(name: Self.favoritesChanged, object: nil)
+        }
+    }
+
+    /// Les dossiers les plus visites qui existent encore et ne sont pas deja
+    /// en acces rapide.
+    func frequentFolders(limit: Int = 6) -> [URL] {
+        let favorites = Set(favoritePaths)
+        return folderVisits
+            .filter { $0.value >= 3 && !favorites.contains($0.key) }
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .lazy
+            .map { URL(fileURLWithPath: $0.key) }
+            .filter { url in
+                var isDirectory: ObjCBool = false
+                return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+                    && isDirectory.boolValue
+            }
+            .prefix(limit)
+            .map { $0 }
     }
 
     /// Favoris de la barre laterale (Acces rapide).
@@ -176,3 +253,4 @@ final class AppSettings: ObservableObject {
             .flatMap(AppLanguage.init(rawValue:)) ?? .system
     }
 }
+

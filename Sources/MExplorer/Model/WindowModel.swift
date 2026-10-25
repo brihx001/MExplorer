@@ -350,6 +350,14 @@ final class WindowModel: ObservableObject {
         }
     }
 
+    // MARK: - Occupation et doublons
+
+    /// Analyse le dossier selectionne, ou le dossier courant.
+    func showDiskUsage() {
+        guard let folder = targetFolder else { NSSound.beep(); return }
+        DiskUsageWindowController.show(for: folder, model: self)
+    }
+
     // MARK: - Renommage par lot
 
     func showBatchRename() {

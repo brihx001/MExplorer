@@ -147,6 +147,8 @@ enum MainMenu {
                 enabled: { model?.selection.contains { !$0.isDirectory } == true }) {
                 model?.showChecksums()
             }
+            add(menu, L("Occupation du dossier..."),
+                enabled: { model?.targetFolder != nil }) { model?.showDiskUsage() }
             let terminals = TerminalLauncher.installed
             if terminals.count == 1, let only = terminals.first {
                 add(menu, L("Ouvrir dans le Terminal"), "t", [.command, .control]) {

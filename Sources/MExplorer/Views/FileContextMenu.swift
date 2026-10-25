@@ -83,6 +83,11 @@ enum FileContextMenu {
         }
 
         menu.addItem(.separator())
+        menu.addBlockItem(L("Occupation du dossier..."), enabled: inFolder, symbol: "chart.pie") {
+            model.showDiskUsage()
+        }
+
+        menu.addItem(.separator())
         menu.addBlockItem(L("Tout selectionner")) { tab.selectAll() }
         menu.addBlockItem(L("Inverser la selection")) { tab.invertSelection() }
         menu.addBlockItem(L("Selectionner par motif...")) { model.promptForSelectionPattern() }
@@ -243,6 +248,9 @@ enum FileContextMenu {
         menu.addBlockItem(L("Compresser"), symbol: "archivebox") { model.compressSelection() }
         if items.contains(where: { !$0.isDirectory }) {
             menu.addBlockItem(L("Somme de controle..."), symbol: "number") { model.showChecksums() }
+        }
+        if single?.isNavigableContainer == true {
+            menu.addBlockItem(L("Occupation du dossier..."), symbol: "chart.pie") { model.showDiskUsage() }
         }
         addTerminalItems(to: menu, model: model, folder: single?.isNavigableContainer == true ? single?.url : nil)
 

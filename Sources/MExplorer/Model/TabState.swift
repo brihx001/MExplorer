@@ -122,7 +122,12 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         filterText = ""
         collapsedGroups.removeAll()
         selectedURLs = []
-        if addToHistory { pushHistory(newLocation) }
+        if addToHistory {
+            pushHistory(newLocation)
+            // Seule une navigation deliberee compte : un rechargement ou un
+            // retour en arriere ne doit pas gonfler le classement.
+            if let folder = newLocation.folderURL { AppSettings.shared.recordVisit(folder) }
+        }
         load()
     }
 

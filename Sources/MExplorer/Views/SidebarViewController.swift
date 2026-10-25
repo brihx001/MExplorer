@@ -214,6 +214,20 @@ final class SidebarViewController: NSViewController {
             }
         result.append(quick)
 
+        // Dossiers frequents : ce que l'Explorateur de Windows 11 affiche a
+        // cote des fichiers recents. La section disparait tant qu'aucun
+        // dossier n'a ete visite assez souvent.
+        let frequent = AppSettings.shared.frequentFolders()
+        if !frequent.isEmpty {
+            let header = SidebarNode(kind: .header, title: L("Dossiers frequents"), symbol: "clock.arrow.circlepath")
+            header.children = frequent.map { url in
+                let node = SidebarNode(folderAt: url, kind: .favorite)
+                node.parent = header
+                return node
+            }
+            result.append(header)
+        }
+
         // iCloud
         if let icloud = SidebarCatalog.iCloudDrive {
             let header = SidebarNode(kind: .header, title: "iCloud", symbol: "icloud")
