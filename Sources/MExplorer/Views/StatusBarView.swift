@@ -38,6 +38,21 @@ struct StatusBarView: View {
                 Divider().frame(height: 12)
                 ProgressView().controlSize(.small).scaleEffect(0.6).frame(width: 14, height: 14)
                 Text(L("Chargement...")).font(.system(size: 11)).foregroundStyle(.secondary)
+                // Une recherche peut durer : elle doit pouvoir etre arretee
+                // sans quitter ses resultats.
+                if tab.isSearching {
+                    Button { tab.stopSearch() } label: {
+                        // Le glyphe seul ne fait que treize points : la zone
+                        // cliquable est elargie, sans quoi la cible est trop
+                        // petite pour etre visee confortablement.
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20, height: 18)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("Arreter la recherche"))
+                }
             }
 
             if tab.isMeasuringFolders {

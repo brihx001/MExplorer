@@ -60,6 +60,7 @@ enum EnglishStrings {
         "Arret en cours...": "Stopping...",
         "Arreter": "Stop",
         "Arreter l'operation": "Stop the operation",
+        "Arreter la recherche": "Stop the search",
         "Au debut": "At the start",
         "Aucun acces": "No access",
         "Aucun doublon.": "No duplicates.",

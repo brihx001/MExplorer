@@ -269,6 +269,10 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         case .recents:
             let s = SpotlightSearch(onUpdate: { [weak self] found in
                 guard let self, token == self.loadToken else { return }
+                // Des le premier lot la liste est consultable : garder
+                // « Chargement... » jusqu'a la fin laisserait croire a un
+                // blocage sur une recherche longue.
+                self.isLoading = false
                 self.items = Self.recentsOrder(found)
                 self.rebuildRows()
             }, onFinish: { [weak self] in
@@ -284,6 +288,7 @@ final class TabState: NSObject, ObservableObject, Identifiable {
             rebuildRows()
             let s = SpotlightSearch(onUpdate: { [weak self] found in
                 guard let self, token == self.loadToken else { return }
+                self.isLoading = false
                 self.items = found
                 self.rebuildRows()
             }, onFinish: { [weak self] in
@@ -526,6 +531,21 @@ final class TabState: NSObject, ObservableObject, Identifiable {
         }
         if total != displayedSize { displayedSize = total }
         if partial != displayedSizeIsPartial { displayedSizeIsPartial = partial }
+    }
+
+    /// Arrete une recherche en cours sans quitter ses resultats.
+    func stopSearch() {
+        guard isSearching else { return }
+        search?.stop()
+        isLoading = false
+    }
+
+    /// Vrai tant qu'une recherche alimente cet onglet.
+    var isSearching: Bool {
+        switch location {
+        case .search, .recents: return search != nil
+        default: return false
+        }
     }
 
     func selectAll() {

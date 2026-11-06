@@ -21,10 +21,22 @@ final class SpotlightSearch {
         guard !trimmed.isEmpty else { stop(); return }
 
         let escaped = trimmed.replacingOccurrences(of: "\"", with: "\\\"")
-        var format = "(kMDItemFSName LIKE[cd] \"*\(escaped)*\")"
+
+        // La syntaxe des requetes Spotlight n'est pas celle de NSPredicate :
+        // la comparaison s'ecrit `==` avec des jokers dans la chaine et les
+        // modificateurs colles a la fin. `LIKE[cd]` est accepte sans erreur
+        // par `NSPredicate(fromMetadataQueryString:)` mais ne correspond a
+        // rien : la recherche par nom ne rendait jamais le moindre resultat.
+        // Mesure : « *licence* » dans le dossier Telechargements rend 47
+        // fichiers avec `==`, aucun avec `LIKE`.
+        var format = "(kMDItemFSName == \"*\(escaped)*\"cd)"
         if includeContent {
-            format += " || (kMDItemTextContent LIKE[cd] \"*\(escaped)*\")"
-            format += " || (kMDItemDisplayName LIKE[cd] \"*\(escaped)*\")"
+            format += " || (kMDItemDisplayName == \"*\(escaped)*\"cd)"
+            // Sur le contenu, un joker de tete interdit a Spotlight de se
+            // servir de son index : il parcourt alors les fichiers un a un et
+            // la recherche ne se termine pas sur une grande arborescence.
+            // « mot* » designe un debut de mot, ce que l'index sait repondre.
+            format += " || (kMDItemTextContent == \"\(escaped)*\"cd)"
         }
         run(format,
             scopes: scope.map { [$0] } ?? [NSMetadataQueryLocalComputerScope],
@@ -45,6 +57,7 @@ final class SpotlightSearch {
 
     private func run(_ format: String, scopes: [Any], sort: [NSSortDescriptor]) {
         stop()
+        generation &+= 1
         let q = NSMetadataQuery()
         q.predicate = NSPredicate(fromMetadataQueryString: format)
         q.searchScopes = scopes
@@ -68,26 +81,73 @@ final class SpotlightSearch {
     }
 
     func stop() {
+        generation &+= 1
+        isBuilding = false
+        needsRebuild = false
         query?.stop()
         for o in observers { NotificationCenter.default.removeObserver(o) }
         observers.removeAll()
         query = nil
     }
 
+    /// Au-dela, la liste cesse d'etre consultable et le cout de construction
+    /// l'emporte sur l'interet.
+    private static let maxResults = 2000
+
+    private let builder = DispatchQueue(label: "com.jerome.mexplorer.search", qos: .userInitiated)
+    private var isBuilding = false
+    private var needsRebuild = false
+    /// Incrementee a chaque depart et a chaque arret : une construction partie
+    /// avant ne publie plus rien.
+    private var generation = 0
+
+    /// Publie les resultats courants.
+    ///
+    /// Appelee a chaque lot de la recherche, toutes les 0,4 seconde. Elle
+    /// construisait jusqu'ici les elements sur le thread principal, avec le jeu
+    /// de clefs complet : `localizedName` passe par LaunchServices, qui
+    /// interroge TCC, et coute jusqu'a plusieurs secondes sur un dossier
+    /// protege. Une recherche sur une grande arborescence figeait donc la
+    /// fenetre, au point qu'on ne pouvait plus ni revenir en arriere ni
+    /// changer de dossier.
     private func publish(_ q: NSMetadataQuery) {
+        // Une seule construction a la fois : les lots arrivent plus vite
+        // qu'ils ne se traitent, et les empiler ne montrerait rien de plus.
+        guard !isBuilding else { needsRebuild = true; return }
+        isBuilding = true
+
+        // Seuls les chemins sont releves ici : NSMetadataQuery ne se consulte
+        // que sur le thread principal. Le reste part en tache de fond.
         q.disableUpdates()
-        defer { q.enableUpdates() }
-        var results: [FileItem] = []
-        results.reserveCapacity(q.resultCount)
-        let keys = Set(FileItem.resourceKeys)
-        for i in 0..<q.resultCount {
-            guard let mdItem = q.result(at: i) as? NSMetadataItem,
-                  let path = mdItem.value(forAttribute: NSMetadataItemPathKey) as? String
+        let count = min(q.resultCount, Self.maxResults)
+        var paths: [String] = []
+        paths.reserveCapacity(count)
+        for index in 0..<count {
+            guard let item = q.result(at: index) as? NSMetadataItem,
+                  let path = item.value(forAttribute: NSMetadataItemPathKey) as? String
             else { continue }
-            let url = URL(fileURLWithPath: path)
-            results.append(FileItem(url: url, values: try? url.resourceValues(forKeys: keys)))
-            if results.count >= 5000 { break }
+            paths.append(path)
         }
-        onUpdate(results)
+        q.enableUpdates()
+
+        let generation = self.generation
+        builder.async { [weak self] in
+            // Le meme jeu de clefs que le chargement d'un dossier, degraisse
+            // pour les memes raisons mesurees.
+            let keys = Set(FileItem.listingKeys)
+            let items = paths.map { path -> FileItem in
+                let url = URL(fileURLWithPath: path)
+                return FileItem(url: url, values: try? url.resourceValues(forKeys: keys))
+            }
+            DispatchQueue.main.async {
+                guard let self, generation == self.generation else { return }
+                self.isBuilding = false
+                self.onUpdate(items)
+                if self.needsRebuild, let query = self.query {
+                    self.needsRebuild = false
+                    self.publish(query)
+                }
+            }
+        }
     }
 }
