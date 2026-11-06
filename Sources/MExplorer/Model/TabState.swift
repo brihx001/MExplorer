@@ -66,6 +66,10 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     /// `loadsImmediately: false` cree un onglet inerte, utilise uniquement
     /// comme repli transitoire par WindowModel.
     init(location: Location, loadsImmediately: Bool = true) {
+        // Comme dans `go(to:)` : un onglet ouvert directement sur un lien, par
+        // la session restauree ou par un document a ouvrir, ne passe pas par la
+        // navigation et resterait sinon sur le lien, donc vide.
+        let location = location.resolved
         self.location = location
         self.title = location.title
         self.settings = location.folderURL.map { FolderSettingsStore.shared.settings(for: $0) }
@@ -112,6 +116,10 @@ final class TabState: NSObject, ObservableObject, Identifiable {
     // MARK: - Navigation
 
     func go(to newLocation: Location, addToHistory: Bool = true) {
+        // Un lien vers un dossier est remplace par sa cible des l'entree : le
+        // fil d'Ariane, la surveillance du dossier, les reglages par dossier et
+        // la session parlent ainsi tous du meme endroit.
+        let newLocation = newLocation.resolved
         guard newLocation != location else { reload(); return }
         persistSettings()
         location = newLocation
