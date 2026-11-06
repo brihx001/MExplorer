@@ -13,10 +13,11 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.6.1](https://github.com/brihx001/MExplorer/releases/tag/v0.6.1)**
-— adds a Refresh button to the command bar; 0.6.0 brought batch rename,
-cancellable copies, archives, folder usage and duplicates, Unix permission
-columns, and windows that reopen where you left them.
+**Latest release: [v0.6.2](https://github.com/brihx001/MExplorer/releases/tag/v0.6.2)**
+— links to a folder, such as the OneDrive folders in the home folder, now open
+and appear in the navigation tree; 0.6.0 brought batch rename, cancellable
+copies, archives, folder usage and duplicates, Unix permission columns, and
+windows that reopen where you left them.
 
 ## Requirements
 
