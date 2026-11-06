@@ -70,19 +70,54 @@ final class SidebarNode: NSObject {
         // L'acces rapide est une liste de raccourcis, pas une arborescence :
         // la hierarchie se deplie sous "Ce Mac" ou "Emplacements".
         case .favorite, .tag, .special: return false
-        case .folder, .volume: return url.map { Self.hasSubdirectories($0) } ?? false
+        case .folder, .volume:
+            guard let url else { return false }
+            // Un lien dont la cible figure deja sur le chemin boucle : il
+            // reste une feuille plutot que de s'ouvrir indefiniment.
+            if let real = realPath, parent?.pathsToRoot.contains(real) == true { return false }
+            return Self.hasSubdirectories(url)
         }
+    }
+
+    /// Chemin du dossier reellement designe : un lien est remplace par sa
+    /// cible. Retenu, le noeud vivant le temps de l'arborescence.
+    var realPath: String? {
+        if let cachedRealPath { return cachedRealPath }
+        guard let url else { return nil }
+        let path = Location.resolveFolder(url).standardizedFileURL.path
+        cachedRealPath = path
+        return path
+    }
+    private var cachedRealPath: String?
+
+    /// Chemins reels de ce noeud et de tous ceux qui y menent.
+    ///
+    /// Un enfant dont la cible s'y trouve deja refermerait une boucle : lien
+    /// vers un ancetre, ou deux liens qui se repondent.
+    private var pathsToRoot: Set<String> {
+        var paths = Set<String>()
+        var node: SidebarNode? = self
+        while let current = node {
+            if let path = current.realPath { paths.insert(path) }
+            node = current.parent
+        }
+        return paths
+    }
+
+    /// Noeud enfant, ou nil s'il refermerait une boucle.
+    private func makeChild(_ url: URL, avoiding seen: Set<String>) -> SidebarNode? {
+        let node = SidebarNode(folderAt: url)
+        guard let path = node.realPath, !seen.contains(path) else { return nil }
+        node.parent = self
+        return node
     }
 
     /// Charge les sous-dossiers (appel synchrone, volontairement borne).
     func loadChildrenIfNeeded() {
         guard children == nil else { return }
         guard let url, kind != .header else { children = children ?? []; return }
-        children = Self.subfolders(of: url).map { child in
-            let node = SidebarNode(folderAt: child)
-            node.parent = self
-            return node
-        }
+        let seen = pathsToRoot
+        children = Self.subfolders(of: url).compactMap { makeChild($0, avoiding: seen) }
     }
 
     /// Relit le dossier et fusionne avec les noeuds existants : ceux qui sont
@@ -98,12 +133,11 @@ final class SidebarNode: NSObject {
         }
 
         var merged: [SidebarNode] = []
+        let seen = pathsToRoot
         for child in Self.subfolders(of: url) {
             if let existing = byPath[child.standardizedFileURL.path] {
                 merged.append(existing)
-            } else {
-                let node = SidebarNode(folderAt: child)
-                node.parent = self
+            } else if let node = makeChild(child, avoiding: seen) {
                 merged.append(node)
             }
         }
@@ -120,17 +154,31 @@ final class SidebarNode: NSObject {
     }
 
     /// Sous-dossiers visibles, tries comme le Finder.
+    ///
+    /// Le dossier lu est le dossier reel : `contentsOfDirectory` ne suit pas
+    /// les liens et repondrait ENOTDIR sur l'un d'eux. Les liens vers un
+    /// dossier sont en revanche retenus parmi les enfants : c'est ainsi que
+    /// OneDrive se presente dans le dossier personnel.
     private static func subfolders(of url: URL) -> [URL] {
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .isSymbolicLinkKey, .isAliasFileKey]
         let contents = (try? FileManager.default.contentsOfDirectory(
-            at: url,
-            includingPropertiesForKeys: [.isDirectoryKey, .isPackageKey],
+            at: Location.resolveFolder(url),
+            includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
         )) ?? []
-        return contents.filter { child in
-            let v = try? child.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
-            return v?.isDirectory == true && v?.isPackage != true
-        }
-        .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        return contents.filter(isFolderOrLink)
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    /// Vrai pour un dossier, ou pour un lien dont la cible en est un. Les
+    /// paquets sont ecartes : ils s'ouvrent, ils ne se parcourent pas.
+    private static func isFolderOrLink(_ url: URL) -> Bool {
+        let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
+        if values?.isDirectory == true { return values?.isPackage != true }
+        let target = Location.resolveFolder(url)
+        guard target != url else { return false }
+        let resolved = try? target.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
+        return resolved?.isDirectory == true && resolved?.isPackage != true
     }
 
     // MARK: - Detection de sous-dossiers (asynchrone)
@@ -148,14 +196,15 @@ final class SidebarNode: NSObject {
         guard !probing.contains(path) else { return true }
 
         // Les volumes non locaux ne sont jamais sondes : trop risque.
-        if let local = try? url.resourceValues(forKeys: [.volumeIsLocalKey]).volumeIsLocal, local == false {
+        let target = Location.resolveFolder(url)
+        if let local = try? target.resourceValues(forKeys: [.volumeIsLocalKey]).volumeIsLocal, local == false {
             subdirCache[path] = true
             return true
         }
 
         probing.insert(path)
         DispatchQueue.global(qos: .utility).async {
-            let found = probe(url)
+            let found = probe(target)
             DispatchQueue.main.async {
                 subdirCache[path] = found
                 probing.remove(path)
@@ -176,8 +225,7 @@ final class SidebarNode: NSObject {
         var scanned = 0
         for case let child as URL in iterator {
             scanned += 1
-            let v = try? child.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
-            if v?.isDirectory == true && v?.isPackage != true { return true }
+            if isFolderOrLink(child) { return true }
             if scanned > 400 { break }
         }
         return false
