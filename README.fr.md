@@ -13,12 +13,10 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.6.2](https://github.com/brihx001/MExplorer/releases/tag/v0.6.2)**
-— les liens vers un dossier, dont les dossiers OneDrive du dossier personnel,
-s'ouvrent et apparaissent dans l'arborescence ; la 0.6.0 a apporte le
-renommage par lot, les copies annulables, les archives, l'occupation et les
-doublons, les colonnes de droits Unix, et les fenetres qui reviennent ou on
-les a laissees.
+**Derniere version : [v0.6.3](https://github.com/brihx001/MExplorer/releases/tag/v0.6.3)**
+— la recherche Spotlight ne rendait rien et figeait la fenetre ; la 0.6.2 a
+rendu les liens vers un dossier, dont les dossiers OneDrive du dossier
+personnel, ouvrables et visibles dans l'arborescence.
 
 ## Prerequis
 
