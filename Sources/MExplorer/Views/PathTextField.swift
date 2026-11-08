@@ -48,6 +48,20 @@ struct PathTextField: NSViewRepresentable {
             parent.text = field.stringValue
         }
 
+        /// Quitter le champ abandonne la saisie et remet le fil d'Ariane,
+        /// comme dans l'Explorateur de Windows : un champ de chemin laisse
+        /// ouvert sans le clavier montrerait bientot un chemin perime.
+        ///
+        /// La liste des possibilites fait elle aussi perdre le clavier au
+        /// champ : elle est mise a part, la saisie se poursuivant apres.
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard !isShowingCompletions else { return }
+            // Le champ disparait au passage au fil d'Ariane : laisser d'abord
+            // AppKit finir de changer de premier repondant.
+            let cancel = parent.onCancel
+            DispatchQueue.main.async { cancel() }
+        }
+
         func control(_ control: NSControl, textView: NSTextView,
                      doCommandBy selector: Selector) -> Bool {
             switch selector {
@@ -136,10 +150,14 @@ struct PathTextField: NSViewRepresentable {
             }
             pendingTextView = textView
             let origin = NSPoint(x: 0, y: textView.bounds.maxY + 4)
+            isShowingCompletions = true
             menu.popUp(positioning: nil, at: origin, in: textView)
+            isShowingCompletions = false
+            textView.window?.makeFirstResponder(textView)
         }
 
         private weak var pendingTextView: NSTextView?
+        private var isShowingCompletions = false
 
         @objc private func choose(_ sender: NSMenuItem) {
             guard let name = sender.representedObject as? String,

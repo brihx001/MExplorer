@@ -47,6 +47,11 @@ struct AddressBarView: View {
             model.isAddressBarEditing = false
             DispatchQueue.main.async { searchFocused = true }
         }
+        // Naviguer pendant la saisie (barre laterale, liste, onglet voisin)
+        // rend la main au fil d'Ariane. Sans cela le champ reste ouvert sur le
+        // chemin d'avant, qui n'est plus celui du dossier affiche.
+        .onChange(of: tab.location) { _, _ in model.isAddressBarEditing = false }
+        .onChange(of: model.selectedTabIndex) { _, _ in model.isAddressBarEditing = false }
     }
 
     // MARK: - Boutons de navigation
