@@ -13,7 +13,7 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.6.3](https://github.com/brihx001/MExplorer/releases/tag/v0.6.3)**
+**Latest release: [v0.6.4](https://github.com/brihx001/MExplorer/releases/tag/v0.6.4)**
 — Spotlight search returned nothing and froze the window; 0.6.2 made links to
 a folder, such as the OneDrive folders in the home folder, open and appear in
 the navigation tree.

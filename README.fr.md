@@ -13,7 +13,7 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.6.3](https://github.com/brihx001/MExplorer/releases/tag/v0.6.3)**
+**Derniere version : [v0.6.4](https://github.com/brihx001/MExplorer/releases/tag/v0.6.4)**
 — la recherche Spotlight ne rendait rien et figeait la fenetre ; la 0.6.2 a
 rendu les liens vers un dossier, dont les dossiers OneDrive du dossier
 personnel, ouvrables et visibles dans l'arborescence.
