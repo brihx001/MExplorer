@@ -14,9 +14,9 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 **[English](README.md)** · **Francais**
 
 **Derniere version : [v0.6.4](https://github.com/brihx001/MExplorer/releases/tag/v0.6.4)**
-— la recherche Spotlight ne rendait rien et figeait la fenetre ; la 0.6.2 a
-rendu les liens vers un dossier, dont les dossiers OneDrive du dossier
-personnel, ouvrables et visibles dans l'arborescence.
+— la barre d'adresse restait sur le chemin precedent une fois passee en champ
+de saisie ; la 0.6.3 a corrige la recherche Spotlight, qui ne rendait rien et
+figeait la fenetre.
 
 ## Prerequis
 
@@ -152,13 +152,21 @@ pour cela.
   n'existant plus.
 - **Barre d'adresse** : boutons Precedent / Suivant / Parent / Actualiser,
   fil d'Ariane cliquable avec menu de sous-dossiers sur chaque chevron,
-  bascule en champ de saisie de chemin (Cmd L), champ de recherche.
+  bascule en champ de saisie de chemin (Cmd L), champ de recherche. Le champ
+  de saisie rend la main au fil d'Ariane des que l'on navigue ailleurs ou que
+  l'on quitte le champ : la barre ne montre jamais un chemin que la fenetre a
+  quitte.
 - **8 modes d'affichage** : Tres grandes / Grandes / Moyennes / Petites icones,
   Liste, Details, Mosaiques, Contenu.
 - **Details multi-colonnes** : Nom, Modifie le, Type, Taille, Cree le,
-  Ajoute le, Tags, Extension, Chemin. Colonnes redimensionnables, reordonnables,
-  triables par clic sur l'en-tete (un second clic inverse le sens), activables
-  par clic droit sur l'en-tete. Largeurs memorisees par dossier. Un
+  Ajoute le, Tags, Extension, Chemin, iCloud, Droits, Proprietaire et Groupe.
+  Les colonnes Unix viennent d'un seul `lstat` et se lisent comme `ls -l` : un
+  lien symbolique montre ses propres droits, pas ceux de sa cible. Colonnes
+  redimensionnables, reordonnables, triables par clic sur l'en-tete (un second
+  clic inverse le sens), activables par clic droit sur l'en-tete. Chemin,
+  iCloud, Droits, Proprietaire et Groupe ne servent pas de critere de tri :
+  trier dessus demanderait de lire chaque element du dossier, y compris ceux
+  qui ne sont pas affiches. Largeurs memorisees par dossier. Un
   **double-clic sur un separateur de colonnes** l'ajuste au plus large de ses
   contenus, comme dans un tableur.
 - **Taille reelle des dossiers** : calculee en tache de fond, un dossier a la
@@ -229,7 +237,10 @@ pour cela.
 - **Completion de chemin** a la tabulation, et historique au clic maintenu sur
   Precedent ou Suivant.
 - **Barre de commandes personnalisable** : quels boutons, dans quel ordre.
-- **Toutes les fenetres** sont rouvertes au lancement, chacune avec ses onglets.
+- **Toutes les fenetres** sont rouvertes au lancement, chacune avec ses
+  onglets, a la position et a la taille qu'elles avaient en quittant. Un cadre
+  qui ne tombe plus sur aucun ecran, apres un moniteur debranche ou une
+  resolution changee, est remplace plutot que laisse hors de portee.
 
 ### Services natifs du Finder
 
@@ -519,7 +530,6 @@ cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output
   deja present ne se deplace pas dans la liste par ce moyen.
 - Pas de « Remettre » depuis la corbeille (l'emplacement d'origine n'est pas
   accessible sous bac a sable).
-- La restauration de session ne retablit qu'une fenetre.
 - La selection par lasso n'existe que dans les modes icones (limite de
   NSTableView en mode Details).
 - Les paquets (`.app`, `.photoslibrary`) n'ont pas de vignette Quick Look :

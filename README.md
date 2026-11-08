@@ -14,9 +14,9 @@ No third-party dependency.
 **English** · **[Francais](README.fr.md)**
 
 **Latest release: [v0.6.4](https://github.com/brihx001/MExplorer/releases/tag/v0.6.4)**
-— Spotlight search returned nothing and froze the window; 0.6.2 made links to
-a folder, such as the OneDrive folders in the home folder, open and appear in
-the navigation tree.
+— the address bar kept showing the previous path once switched to the path
+field; 0.6.3 fixed the Spotlight search, which returned nothing and froze the
+window.
 
 ## Requirements
 
@@ -153,15 +153,21 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   in place. It cannot be undone, the old content no longer existing.
 - **Address bar**: Back / Forward / Parent / Refresh buttons, clickable
   breadcrumb with a subfolder menu on every chevron, switch to a path field
-  (Cmd L), search field.
+  (Cmd L), search field. The path field gives the breadcrumb back as soon as
+  you navigate elsewhere or leave the field, so the bar never shows a path the
+  window has left.
 - **8 view modes**: Extra large / Large / Medium / Small icons, List, Details,
   Tiles, Content.
 - **Multi-column details**: Name, Date modified, Type, Size, Date created, Date
-  added, Tags, Extension, Path. Columns are resizable, reorderable, sortable by
-  clicking the header (a second click reverses the direction), and switched on
-  by right-clicking the header. Widths are remembered per folder. A
-  **double-click on a column separator** fits it to its widest content, as in a
-  spreadsheet.
+  added, Tags, Extension, Path, iCloud, Permissions, Owner and Group. The
+  Unix columns come from a single `lstat` and read like `ls -l`, so a symbolic
+  link shows its own rights rather than its target's. Columns are resizable,
+  reorderable, sortable by clicking the header (a second click reverses the
+  direction), and switched on by right-clicking the header. Path, iCloud,
+  Permissions, Owner and Group are not offered as sort keys: sorting on them
+  would mean reading every item of the folder, including those not displayed.
+  Widths are remembered per folder. A **double-click on a column separator**
+  fits it to its widest content, as in a spreadsheet.
 - **Real folder sizes**: computed in the background, one folder at a time,
   shown as they arrive in Details and kept until the folder changes. **Sorting
   by size uses them**: folders and files are then interleaved by their actual
@@ -225,7 +231,10 @@ the project (entitlements, bookmarks, no private API) is ready for it.
 - **Path completion** on Tab in the address field, and the history under a long
   press on Back or Forward.
 - **A customisable command bar**: which buttons appear, and in which order.
-- **Every window** is reopened at launch, each with its tabs.
+- **Every window** is reopened at launch, each with its tabs, at the position
+  and the size it had on quit. A frame that no longer falls on a screen, after
+  a display was unplugged or its resolution changed, is replaced rather than
+  left out of reach.
 
 ### Native Finder services
 
@@ -505,7 +514,6 @@ cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output
   list cannot be moved within it that way.
 - No *Put Back* from the trash (the original location is not reachable under
   the sandbox).
-- Session restore reopens a single window.
 - Rubber-band selection exists only in the icon modes (an NSTableView limit in
   Details).
 - Packages (`.app`, `.photoslibrary`) have no Quick Look thumbnail: they keep
