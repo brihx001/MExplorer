@@ -434,8 +434,14 @@ fabricant, et pour les compteurs de secteurs defectueux des qu'ils depassent
 zero.
 
 Une limite tient au materiel : un boitier USB ne transmet pas toujours les
-commandes de diagnostic au disque qu'il contient. Le Crucial X9 de test est
-dans ce cas, et l'entree de menu n'apparait pas pour lui.
+commandes de diagnostic au disque qu'il contient. Le Crucial X9 et le Seagate
+Expansion de test sont dans ce cas, et `diskutil` repond « Not Supported »
+pour eux hors du bac a sable egalement. L'entree de menu reste offerte malgre
+tout : la fenetre dit alors pourquoi aucun releve de sante ne suit, et montre
+ce que le peripherique publie bel et bien, lu par IOKit, soit le modele, le
+fabricant, la revision du micrologiciel, le bus, la capacite, l'etat en
+lecture seule et le caractere amovible du support. Masquer l'entree
+n'apprenait rien a l'utilisateur, pas meme si la fonction existait encore.
 
 ### Cartes memoire
 

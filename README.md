@@ -422,8 +422,14 @@ manufacturer's threshold, and the bad-sector counters as soon as they go above
 zero.
 
 One limit comes from the hardware: a USB enclosure does not always pass the
-diagnostic commands through to the disk it holds. The Crucial X9 used for
-testing is in that case, and the menu entry does not appear for it.
+diagnostic commands through to the disk it holds. The Crucial X9 and the
+Seagate Expansion used for testing are in that case, and `diskutil` says
+"Not Supported" for them outside the sandbox as well. The menu entry stays
+offered all the same: the window then says why no health reading follows and
+shows what the device does publish, read from IOKit, namely model,
+manufacturer, firmware revision, bus, capacity, read-only state and whether
+the medium is removable. Hiding the entry told the user nothing, not even
+whether the feature still existed.
 
 ### Memory cards
 

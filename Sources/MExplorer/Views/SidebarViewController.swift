@@ -516,6 +516,9 @@ extension SidebarViewController: NSMenuDelegate {
             case .media:
                 menu.addItem(withTitle: L("Voir les informations du support..."),
                              action: #selector(menuShowSMART), keyEquivalent: "")
+            case .disk:
+                menu.addItem(withTitle: L("Voir les informations du disque..."),
+                             action: #selector(menuShowSMART), keyEquivalent: "")
             case .none:
                 break
             }

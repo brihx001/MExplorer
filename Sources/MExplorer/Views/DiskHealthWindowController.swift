@@ -27,9 +27,15 @@ final class DiskHealthWindowController: NSWindowController {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
                               styleMask: [.titled, .closable, .resizable],
                               backing: .buffered, defer: false)
-        // Parler de SMART devant une carte memoire serait un contresens.
-        let isCardOnly = (health?.isCard ?? false) && !(health?.hasSMART ?? false)
-        window.title = isCardOnly ? L("Informations du support") : L("Informations SMART")
+        // Parler de SMART devant un support qui n'en rend pas serait un
+        // contresens : la fenetre y montre une identite, pas une sante.
+        if health?.hasSMART == true {
+            window.title = L("Informations SMART")
+        } else if health?.isCard == true {
+            window.title = L("Informations du support")
+        } else {
+            window.title = L("Informations du disque")
+        }
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: DiskHealthView(health: health, volumeName: title))
         window.center()

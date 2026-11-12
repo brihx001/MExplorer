@@ -32,7 +32,8 @@ struct DiskHealth {
     let unavailableReason: String?
     /// Ce que le support publie sur lui-meme. Pour une carte memoire, c'est
     /// tout ce qui existe : SMART est un jeu de commandes ATA et NVMe, que la
-    /// norme SD ne reprend pas.
+    /// norme SD ne reprend pas. Pour un disque muet, derriere un boitier USB
+    /// par exemple, c'est tout ce qui reste a montrer.
     let identity: [Measure]
     /// Vrai si le support est une carte memoire (SD, SDHC, SDXC).
     let isCard: Bool
@@ -40,7 +41,12 @@ struct DiskHealth {
     var hasSMART: Bool { smart != nil || ata != nil }
 
     /// Ce que la fenetre a a montrer pour un support donne.
-    enum Report { case none, smart, media }
+    ///
+    /// `disk` est le cas d'un disque identifie qui ne rend pas de SMART :
+    /// l'entree de menu reste offerte, la fenetre expliquant l'absence et
+    /// montrant l'identite publiee. Seul `none`, un volume qui ne repose sur
+    /// aucun disque local, retire l'entree.
+    enum Report { case none, smart, media, disk }
 
     // MARK: - Lecture
 
@@ -87,13 +93,17 @@ struct DiskHealth {
         var ataData = MEXATASMART()
         let hasATA = hasNVMe ? false : mex_read_ata_smart(service, &ataData)
 
+        let identity = identityMeasures(device: properties, bsdName: device, isCard: isCard)
+
         let reason: String?
         if hasNVMe || hasATA {
             reason = nil
         } else if isCard {
             reason = L("Une carte memoire ne rend pas de donnees SMART : SMART est un jeu de commandes ATA et NVMe, que la norme SD ne reprend pas. Voici ce que la carte publie sur elle-meme.")
-        } else {
+        } else if identity.isEmpty {
             reason = L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent.")
+        } else {
+            reason = L("Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent. Voici ce que le peripherique publie sur lui-meme.")
         }
 
         return DiskHealth(
@@ -104,7 +114,7 @@ struct DiskHealth {
             smart: hasNVMe ? nvme : nil,
             ata: hasATA ? ataData : nil,
             unavailableReason: reason,
-            identity: identityMeasures(device: properties, bsdName: device, isCard: isCard),
+            identity: identity,
             isCard: isCard)
     }
 
@@ -118,7 +128,7 @@ struct DiskHealth {
     /// dictionnaire depend du lecteur, d'ou le repli qui publie les cles
     /// inconnues plutot que de les perdre.
     private static func identityMeasures(device: [String: Any], bsdName: String, isCard: Bool) -> [Measure] {
-        guard isCard else { return [] }
+        guard isCard else { return diskMeasures(device: device, bsdName: bsdName) }
         let media = mediaProperties(forBSDName: bsdName)
         let characteristics = device["Device Characteristics"] as? [String: Any] ?? [:]
         var card = device["Card Characteristics"] as? [String: Any] ?? [:]
@@ -212,6 +222,94 @@ struct DiskHealth {
         return list
     }
 
+    /// Ce qu'un disque sans SMART sait dire de lui-meme.
+    ///
+    /// Un boitier USB ne transmet pas les commandes de diagnostic du disque
+    /// qu'il contient, mais il publie toujours son identite SCSI, et l'objet
+    /// IOMedia porte la taille et le verrou d'ecriture. Mieux vaut montrer
+    /// cela, et dire pourquoi le reste manque, que de retirer l'entree de
+    /// menu et laisser croire que la fonction a disparu.
+    private static func diskMeasures(device: [String: Any], bsdName: String) -> [Measure] {
+        let characteristics = device["Device Characteristics"] as? [String: Any] ?? [:]
+        let bus = device["Protocol Characteristics"] as? [String: Any] ?? [:]
+        let media = mediaProperties(forBSDName: bsdName)
+        var list: [Measure] = []
+
+        func text(_ key: String, in dict: [String: Any]) -> String? {
+            let value: String
+            if let string = dict[key] as? String { value = string }
+            else if let number = dict[key] as? NSNumber { value = number.stringValue }
+            else { return nil }
+            let trimmed = value.trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+
+        if let model = text("Product Name", in: characteristics) {
+            list.append(Measure(
+                label: L("Modele"),
+                value: model,
+                isAbnormal: false,
+                explanation: L("Nom declare par le peripherique. Derriere un boitier USB, c'est celui du boitier, pas forcement celui du disque qu'il contient.")))
+        }
+        if let vendor = text("Vendor Name", in: characteristics) {
+            list.append(Measure(
+                label: L("Fabricant"),
+                value: vendor,
+                isAbnormal: false,
+                explanation: L("Fabricant declare par le peripherique, de la meme source que le modele.")))
+        }
+        if let revision = text("Product Revision Level", in: characteristics) {
+            list.append(Measure(
+                label: L("Revision"),
+                value: revision,
+                isAbnormal: false,
+                explanation: L("Version du micrologiciel du peripherique.")))
+        }
+        if let serial = text("Serial Number", in: characteristics) {
+            list.append(Measure(
+                label: L("Numero de serie"),
+                value: serial,
+                isAbnormal: false,
+                explanation: L("Numero unique inscrit a la fabrication. Beaucoup de boitiers USB n'en publient aucun.")))
+        }
+        if let medium = text("Medium Type", in: characteristics) {
+            list.append(Measure(
+                label: L("Type de support"),
+                value: medium,
+                isAbnormal: false,
+                explanation: L("Nature du support telle que le controleur la declare, memoire flash ou plateaux tournants.")))
+        }
+        if let interconnect = text("Physical Interconnect", in: bus) {
+            list.append(Measure(
+                label: L("Bus"),
+                value: interconnect,
+                isAbnormal: false,
+                explanation: L("Liaison par laquelle le disque est rattache. SMART voyage sur ATA et NVMe ; un pont USB ne le transmet que s'il traduit les commandes.")))
+        }
+        if let size = media["Size"] as? NSNumber, size.int64Value > 0 {
+            list.append(Measure(
+                label: L("Capacite"),
+                value: Fmt.size(size.int64Value),
+                isAbnormal: false,
+                explanation: L("Taille totale du disque entier, telle que le controleur la declare.")))
+        }
+        if let writable = media["Writable"] as? Bool {
+            list.append(Measure(
+                label: L("Acces"),
+                value: writable ? L("Lecture et ecriture") : L("Lecture seule"),
+                isAbnormal: false,
+                explanation: L("Etat du support lui-meme, independamment des droits du volume monte dessus.")))
+        }
+        if let removable = media["Removable"] as? Bool {
+            list.append(Measure(
+                label: L("Amovible"),
+                value: removable ? L("Oui") : L("Non"),
+                isAbnormal: false,
+                explanation: L("Vrai pour un support que l'on retire du lecteur, pas pour un disque dont on debranche le boitier.")))
+        }
+        return list
+    }
+
     /// Proprietes de l'objet IOMedia du disque entier : capacite et verrou
     /// d'ecriture, que le peripherique ne porte pas lui-meme.
     private static func mediaProperties(forBSDName name: String) -> [String: Any] {
@@ -236,9 +334,10 @@ struct DiskHealth {
         if let known = supportCache[device] { return known }
         let health = read(forVolumeAt: url)
         let report: Report
-        if health?.hasSMART == true { report = .smart }
-        else if health?.identity.isEmpty == false { report = .media }
-        else { report = .none }
+        if health == nil { report = .none }
+        else if health?.hasSMART == true { report = .smart }
+        else if health?.isCard == true { report = .media }
+        else { report = .disk }
         supportCache[device] = report
         return report
     }
