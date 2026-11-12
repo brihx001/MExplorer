@@ -13,10 +13,10 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.6.4](https://github.com/brihx001/MExplorer/releases/tag/v0.6.4)**
-— the address bar kept showing the previous path once switched to the path
-field; 0.6.3 fixed the Spotlight search, which returned nothing and froze the
-window.
+**Latest release: [v0.6.5](https://github.com/brihx001/MExplorer/releases/tag/v0.6.5)**
+— a disk without SMART, behind a USB enclosure for instance, used to lose its
+menu entry altogether; it now opens a window that says why no health reading
+follows and shows what the device does publish.
 
 ## Requirements
 
