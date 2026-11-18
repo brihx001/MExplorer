@@ -193,8 +193,9 @@ pour cela.
   un reglage par dossier donnait l'impression que l'option ne tenait pas.
 - **Barre d'etat** : nombre d'elements et poids cumule a gauche, resume de la
   selection, progression des operations longues, puis a droite une **jauge de
-  remplissage du volume courant** (du vert au rouge selon le taux d'occupation,
-  detail complet en infobulle) et les bascules d'affichage. Le poids cumule se
+  remplissage du volume courant**, precedee de son nom (du vert au rouge selon
+  le taux d'occupation, detail complet en infobulle) et les bascules
+  d'affichage. Le poids cumule se
   termine par des points de suspension tant que des tailles de dossiers restent
   a calculer.
 - **Volet de details** et **volet d'apercu** a droite, dont la visibilite est

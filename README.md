@@ -189,8 +189,8 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   the option did not stick.
 - **Status bar**: item count and total size on the left, summary of the
   selection, progress of long operations, then on the right a **fill gauge for
-  the current volume** (green to red depending on how full it is, full detail in
-  a tooltip) and the display toggles. The total size ends with an ellipsis for
+  the current volume**, preceded by its name (green to red depending on how full
+  it is, full detail in a tooltip) and the display toggles. The total size ends with an ellipsis for
   as long as folder sizes remain to be computed.
 - **Details pane** and **preview pane** on the right, whose visibility is
   remembered between launches.

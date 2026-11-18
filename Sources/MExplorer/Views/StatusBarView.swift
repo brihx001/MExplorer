@@ -141,6 +141,17 @@ struct DiskGauge: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            // Sans le nom, la jauge ne dit pas de quoi elle parle : le dossier
+            // affiche n'est pas toujours sur le disque de demarrage.
+            Text(usage.name)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                // Un nom de volume peut etre long : c'est lui qui cede la
+                // place, la jauge et le chiffre restant entiers.
+                .layoutPriority(-1)
+
             ZStack(alignment: .leading) {
                 // La piste doit rester lisible : sans elle, la jauge ressemble
                 // a une simple barre pleine et la proportion ne se lit plus.
