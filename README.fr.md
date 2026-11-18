@@ -13,11 +13,11 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.6.5](https://github.com/brihx001/MExplorer/releases/tag/v0.6.5)**
-— un disque sans SMART, derriere un boitier USB par exemple, perdait purement
-et simplement son entree de menu ; elle ouvre desormais une fenetre qui dit
-pourquoi aucun releve de sante ne suit et montre ce que le peripherique
-publie.
+**Derniere version : [v0.6.6](https://github.com/brihx001/MExplorer/releases/tag/v0.6.6)**
+— les services de stockage en nuage sont reunis dans une section « Nuage » de
+la barre laterale, et un fichier qui n'est pas sur le disque se reconnait d'un
+coup d'oeil, comme dans le Finder. La jauge de la barre d'etat nomme enfin le
+volume qu'elle mesure.
 
 ## Prerequis
 

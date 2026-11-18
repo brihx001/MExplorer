@@ -13,10 +13,10 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.6.5](https://github.com/brihx001/MExplorer/releases/tag/v0.6.5)**
-— a disk without SMART, behind a USB enclosure for instance, used to lose its
-menu entry altogether; it now opens a window that says why no health reading
-follows and shows what the device does publish.
+**Latest release: [v0.6.6](https://github.com/brihx001/MExplorer/releases/tag/v0.6.6)**
+— the cloud storage services are gathered in a *Cloud* section of the sidebar,
+and a file that is not on the disk is recognised at a glance, as in the Finder.
+The status bar gauge at last names the volume it measures.
 
 ## Requirements
 
