@@ -167,7 +167,6 @@ enum EnglishStrings {
         "Cree le": "Date created",
         "Creer un alias": "Make alias",
         "Croissant": "Ascending",
-        "Dans iCloud": "In iCloud",
         "Date de fabrication": "Manufacture date",
         "Date inconnue": "Unknown date",
         "Debit minimal garanti par le fabricant, utile pour la video. Il ne dit rien de l'etat de la carte.": "Minimum throughput guaranteed by the maker, useful for video. It says nothing about the card's condition.",
@@ -283,7 +282,6 @@ enum EnglishStrings {
         "Nom du tag a appliquer a la selection.": "Name of the tag to apply to the selection.",
         "Nom et extension": "Name and extension",
         "Nom seul": "Name only",
-        "Non telecharge": "Not downloaded",
         "Nouveau": "New",
         "Nouveau document texte": "New text document",
         "Nouveau document.rtf": "New document.rtf",
@@ -502,5 +500,7 @@ enum EnglishStrings {
         "Etat du support lui-meme, independamment des droits du volume monte dessus.": "State of the medium itself, whatever the rights of the volume mounted on it.",
         "Vrai pour un support que l'on retire du lecteur, pas pour un disque dont on debranche le boitier.": "True for a medium taken out of its reader, not for a disk whose enclosure is unplugged.",
         "Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent. Voici ce que le peripherique publie sur lui-meme.": "This disk exposes no SMART data. That is usual for USB enclosures, which do not pass the diagnostic commands through to the drive inside. Here is what the device publishes about itself.",
+        "Nuage": "Cloud",
+        "Dans le nuage": "In the cloud",
     ]
 }

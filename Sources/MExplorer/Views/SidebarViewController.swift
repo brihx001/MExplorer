@@ -80,7 +80,11 @@ final class SidebarViewController: NSViewController {
         super.viewDidLoad()
         rebuild()
         SidebarCatalog.refreshVolumes()
+        CloudLocations.refresh()
         let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: CloudLocations.changed, object: nil, queue: .main) { [weak self] _ in
+            self?.rebuild()
+        })
         observers.append(center.addObserver(forName: SidebarCatalog.volumesChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuild()
         })
@@ -102,9 +106,15 @@ final class SidebarViewController: NSViewController {
             self?.refreshWatchedFolders()
         })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didMountNotification, object: nil, queue: .main) { _ in SidebarCatalog.refreshVolumes() })
+            forName: NSWorkspace.didMountNotification, object: nil, queue: .main) { _ in
+                SidebarCatalog.refreshVolumes()
+                CloudLocations.refresh()
+            })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didUnmountNotification, object: nil, queue: .main) { _ in SidebarCatalog.refreshVolumes() })
+            forName: NSWorkspace.didUnmountNotification, object: nil, queue: .main) { _ in
+                SidebarCatalog.refreshVolumes()
+                CloudLocations.refresh()
+            })
     }
 
     private var expandabilityRefresh: DispatchWorkItem?
@@ -228,12 +238,21 @@ final class SidebarViewController: NSViewController {
             result.append(header)
         }
 
-        // iCloud
-        if let icloud = SidebarCatalog.iCloudDrive {
-            let header = SidebarNode(kind: .header, title: "iCloud", symbol: "icloud")
-            let node = SidebarNode(folderAt: icloud, title: L("iCloud Drive"))
-            node.parent = header
-            header.children = [node]
+        // Nuage : iCloud Drive et les services installes sur ce Mac, reunis
+        // en une seule section plutot que disperses dans l'arborescence, ou
+        // macOS les range sous Library/CloudStorage.
+        let cloudRoots = CloudLocations.roots
+        if !cloudRoots.isEmpty {
+            let header = SidebarNode(kind: .header, title: L("Nuage"), symbol: "cloud")
+            header.children = cloudRoots.map { root in
+                let node = SidebarNode(kind: .folder,
+                                       title: root.title,
+                                       symbol: root.provider.symbol,
+                                       location: .folder(root.url),
+                                       url: root.url)
+                node.parent = header
+                return node
+            }
             result.append(header)
         }
 

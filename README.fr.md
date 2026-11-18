@@ -112,7 +112,7 @@ pour cela.
   pendant un glissement bascule dessus apres un court instant (onglet « a
   ressort »), ce qui permet de deposer dans la liste plutot que sur l'onglet.
 - **Volet de navigation** : arborescence reelle et depliable a l'infini
-  (Acces rapide, iCloud, Ce Mac, Emplacements, Tags, Recents, Corbeille).
+  (Acces rapide, Nuage, Ce Mac, Emplacements, Tags, Recents, Corbeille).
   Le dossier courant est revele et selectionne dans l'arborescence reelle,
   meme quand on y arrive par un raccourci de l'acces rapide. Les dossiers
   deplies sont surveilles : une creation, une suppression ou un renommage, fait
@@ -160,12 +160,12 @@ pour cela.
 - **8 modes d'affichage** : Tres grandes / Grandes / Moyennes / Petites icones,
   Liste, Details, Mosaiques, Contenu.
 - **Details multi-colonnes** : Nom, Modifie le, Type, Taille, Cree le,
-  Ajoute le, Tags, Extension, Chemin, iCloud, Droits, Proprietaire et Groupe.
+  Ajoute le, Tags, Extension, Chemin, Nuage, Droits, Proprietaire et Groupe.
   Les colonnes Unix viennent d'un seul `lstat` et se lisent comme `ls -l` : un
   lien symbolique montre ses propres droits, pas ceux de sa cible. Colonnes
   redimensionnables, reordonnables, triables par clic sur l'en-tete (un second
   clic inverse le sens), activables par clic droit sur l'en-tete. Chemin,
-  iCloud, Droits, Proprietaire et Groupe ne servent pas de critere de tri :
+  Nuage, Droits, Proprietaire et Groupe ne servent pas de critere de tri :
   trier dessus demanderait de lire chaque element du dossier, y compris ceux
   qui ne sont pas affiches. Largeurs memorisees par dossier. Un
   **double-clic sur un separateur de colonnes** l'ajuste au plus large de ses
@@ -232,8 +232,9 @@ pour cela.
 - **Dossiers frequents** dans la barre laterale, des la troisieme visite.
 - **Permissions POSIX editables** dans la fenetre d'informations, sans toucher
   aux bits d'execution.
-- **Pastilles** sur les icones : alias, lien symbolique, verrou.
-- **Colonne iCloud**, lue a la demande pour ne pas ralentir le chargement.
+- **Pastilles** sur les icones : alias, lien symbolique, fichier garde en
+  ligne, verrou.
+- **Colonne Nuage**, lue a la demande pour ne pas ralentir le chargement.
 - **Toujours ouvrir avec**, pour tous les fichiers de meme type.
 - **Completion de chemin** a la tabulation, et historique au clic maintenu sur
   Precedent ou Suivant.
@@ -276,6 +277,15 @@ pour cela.
   la fenetre affiche a la place ce qu'elle publie sur elle-meme : fabricant,
   revision, numero de serie, date de fabrication, classe de vitesse, capacite,
   protection en ecriture.
+- **Stockage en nuage** : iCloud Drive, OneDrive, Dropbox, Google Drive, Box,
+  Proton Drive, pCloud... sont reunis dans une section « Nuage » de la barre
+  laterale, au lieu d'etre disperses dans `Bibliotheque/CloudStorage`. Un
+  fichier que le service garde en ligne porte un nuage au bout de son nom,
+  comme dans le Finder, et une pastille sur son icone dans les vues en grille.
+  La colonne « Nuage » de la vue Details et le volet de details nomment le
+  service et disent si le fichier est telecharge. L'etat vient du drapeau
+  `SF_DATALESS` du noyau, trois mille fois moins couteux que les cles d'ubiquite
+  d'URL, qui mettaient 3,4 ms par ligne dessinee.
 - **A propos** : affiche la date et l'heure de construction du binaire, posees
   par `build.sh` dans le bundle.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
@@ -336,7 +346,7 @@ Six couts mesures sur ce Mac ont dicte l'architecture :
 | --- | --- | --- |
 | `localizedName` sur un dossier protege par TCC | ~5 a 10 s par appel | `DisplayNameCache`, asynchrone et persistant |
 | `tagNames` / `labelNumber` | un `getxattr` par fichier | seconde passe apres affichage |
-| `isUbiquitousItem` / `ubiquitousItemDownloadingStatus` | 77 us par fichier, soit les deux tiers du chargement d'un dossier de 5 200 elements | lus a la demande, pour le seul element selectionne |
+| `isUbiquitousItem` / `ubiquitousItemDownloadingStatus` | 3,4 ms par fichier sur une extension de fichiers (414 ms pour 123 elements), soit les deux tiers du chargement d'un dossier de 5 200 elements | abandonnes au profit de `lstat` et du drapeau `SF_DATALESS` : 1,1 ms pour les memes 123 elements |
 | `NSWorkspace.icon(forFile:)` | LaunchServices, blocage possible | icone generique immediate, specifique en differe |
 | Contenu d'un menu SwiftUI | evalue **a chaque rendu** | `SubfolderCache`, jamais de lecture disque dans le menu |
 | Taille d'un dossier | parcours recursif complet | `FolderSizeCalculator`, un dossier a la fois, annulable |
@@ -479,10 +489,10 @@ degraissage du jeu de clefs de chargement :
 | Lecture du dossier (listing + valeurs) | 0,655 s | 0,200 s |
 | Memoire ajoutee par le dossier | 25,3 Mo | 13,7 Mo |
 
-Le gain vient de trois clefs retirees du chargement : l'etat iCloud, qui
-coutait a lui seul les deux tiers du temps et ne sert qu'au volet de details,
-et les capacites de volume, lues par fichier alors qu'elles decrivent le
-disque. S'y ajoutent les libelles de type partages entre fichiers de meme
+Le gain vient de trois clefs retirees du chargement : l'etat dans le nuage, qui
+coutait a lui seul les deux tiers du temps et vient desormais d'un seul
+`lstat`, et les capacites de volume, lues par fichier alors qu'elles decrivent
+le disque. S'y ajoutent les libelles de type partages entre fichiers de meme
 nature, et un cache de vignettes borne en octets (64 Mo) plutot qu'en nombre :
 1 500 vignettes Retina auraient pu depasser le demi-gigaoctet.
 
@@ -543,6 +553,12 @@ cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output
   ils gardent leur icone, pour la raison expliquee plus haut.
 - Les fichiers tres volumineux dont QuickLook echoue a produire une vignette
   gardent l'icone generique de leur type.
+- Un dossier dont tout le contenu est garde en ligne n'est pas marque : le
+  noyau ne pose son drapeau que sur les fichiers, et le Finder lit cela aupres
+  de l'extension de fichiers par une interface privee.
+- La section « Nuage » nomme un dossier de compte comme macOS l'enregistre
+  (`OneDrive-Contoso`) ; le nom presentable qu'affiche le Finder vient de la
+  meme interface privee.
 - Le calcul des tailles de dossiers est partage par toutes les fenetres : le
   dernier dossier affiche prend la main sur la file d'attente.
 - Une taille memorisee est recalculee quand le dossier lui-meme change, pas

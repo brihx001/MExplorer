@@ -605,20 +605,10 @@ extension FileListViewController: NSTableViewDelegate {
         }
     }
 
-    /// Etat iCloud, lu a la demande et seulement si la colonne est affichee.
-    ///
-    /// Ces deux clefs coutaient a elles seules les deux tiers du chargement
-    /// d'un dossier de 5 200 elements : elles restent hors du jeu de clefs
-    /// lu en masse, et ne sont interrogees que pour les lignes dessinees.
+    /// Etat dans le nuage, lu a la demande et seulement pour les lignes
+    /// dessinees. Vide hors de tout service de stockage.
     private func cloudText(for item: FileItem) -> String {
-        let state = item.cloudState
-        guard state.isUbiquitous else { return "" }
-        switch state.status {
-        case .current?: return L("Telecharge")
-        case .downloaded?: return L("Telecharge")
-        case .notDownloaded?: return L("Dans iCloud")
-        default: return L("Dans iCloud")
-        }
+        item.cloudStatus?.text ?? ""
     }
 }
 
@@ -673,6 +663,9 @@ final class FileNameCell: NSTableCellView {
     private let icon = NSImageView()
     private let label = NSTextField(labelWithString: "")
     private let tagStack = NSStackView()
+    /// Nuage pose au bout de la colonne Nom, comme dans le Finder, pour un
+    /// fichier que le service garde en ligne.
+    private let cloudMark = NSImageView()
     private var currentURL: URL?
 
     init(identifier: NSUserInterfaceItemIdentifier) {
@@ -699,6 +692,14 @@ final class FileNameCell: NSTableCellView {
         tagStack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(tagStack)
 
+        cloudMark.image = NSImage(systemSymbolName: "icloud.and.arrow.down",
+                                  accessibilityDescription: L("Dans le nuage"))
+        cloudMark.contentTintColor = .secondaryLabelColor
+        cloudMark.imageScaling = .scaleProportionallyDown
+        cloudMark.isHidden = true
+        cloudMark.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(cloudMark)
+
         NSLayoutConstraint.activate([
             icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
             icon.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -710,7 +711,12 @@ final class FileNameCell: NSTableCellView {
 
             tagStack.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
             tagStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            tagStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4)
+            tagStack.trailingAnchor.constraint(lessThanOrEqualTo: cloudMark.leadingAnchor, constant: -4),
+
+            cloudMark.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            cloudMark.centerYAnchor.constraint(equalTo: centerYAnchor),
+            cloudMark.widthAnchor.constraint(equalToConstant: 15),
+            cloudMark.heightAnchor.constraint(equalToConstant: 15)
         ])
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
@@ -734,7 +740,12 @@ final class FileNameCell: NSTableCellView {
 
     func configure(with item: FileItem, delegate: NSTextFieldDelegate) {
         currentURL = item.url
-        icon.image = IconCache.shared.icon(for: item)
+        // La pastille de nuage est reservee aux grandes icones : ici, le nuage
+        // est pose a cote du nom.
+        icon.image = IconCache.shared.icon(for: item, marksCloud: false)
+        let cloud = item.cloudStatus
+        cloudMark.isHidden = cloud?.state != .inCloud
+        cloudMark.toolTip = cloud?.detailedText
         label.stringValue = displayName(for: item)
         label.delegate = delegate
         // Hors renommage, le libelle n'est ni editable ni selectionnable :

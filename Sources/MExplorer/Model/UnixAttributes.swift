@@ -11,12 +11,20 @@ struct UnixAttributes {
     let mode: mode_t
     let userID: uid_t
     let groupID: gid_t
+    /// Drapeaux de `stat`, dont `SF_DATALESS` (substitut d'un fichier qui
+    /// n'est pas sur le disque, voir CloudLocations).
+    let flags: UInt32
 
     static func read(at url: URL) -> UnixAttributes? {
         var info = stat()
         guard lstat(url.path, &info) == 0 else { return nil }
-        return UnixAttributes(mode: info.st_mode, userID: info.st_uid, groupID: info.st_gid)
+        return UnixAttributes(mode: info.st_mode, userID: info.st_uid,
+                              groupID: info.st_gid, flags: info.st_flags)
     }
+
+    /// Vrai pour un substitut sans donnees : le noyau pose ce drapeau sur les
+    /// fichiers qu'un service de stockage garde en ligne.
+    var isDataless: Bool { flags & UInt32(SF_DATALESS) != 0 }
 
     /// Chaine a la maniere de `ls -l` : type puis trois triplets.
     var text: String {

@@ -117,7 +117,7 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   after a short moment (spring-loaded tab), which allows dropping into the list
   rather than onto the tab.
 - **Navigation pane**: a real tree, expandable without limit (Quick access,
-  iCloud, This Mac, Locations, Tags, Recents, Trash). The current folder is
+  Cloud, This Mac, Locations, Tags, Recents, Trash). The current folder is
   revealed and selected in the real tree, even when reached through a quick
   access shortcut. Expanded folders are watched: a creation, a deletion or a
   rename, made in the application or anywhere else, shows up in the tree
@@ -159,11 +159,11 @@ the project (entitlements, bookmarks, no private API) is ready for it.
 - **8 view modes**: Extra large / Large / Medium / Small icons, List, Details,
   Tiles, Content.
 - **Multi-column details**: Name, Date modified, Type, Size, Date created, Date
-  added, Tags, Extension, Path, iCloud, Permissions, Owner and Group. The
+  added, Tags, Extension, Path, Cloud, Permissions, Owner and Group. The
   Unix columns come from a single `lstat` and read like `ls -l`, so a symbolic
   link shows its own rights rather than its target's. Columns are resizable,
   reorderable, sortable by clicking the header (a second click reverses the
-  direction), and switched on by right-clicking the header. Path, iCloud,
+  direction), and switched on by right-clicking the header. Path, Cloud,
   Permissions, Owner and Group are not offered as sort keys: sorting on them
   would mean reading every item of the folder, including those not displayed.
   Widths are remembered per folder. A **double-click on a column separator**
@@ -225,8 +225,9 @@ the project (entitlements, bookmarks, no private API) is ready for it.
 - **Frequent folders** in the sidebar, after three visits.
 - **Editable POSIX permissions** in the info window, leaving the execute bits
   alone.
-- **Icon badges** for aliases, symbolic links and locked items.
-- **iCloud column**, read on demand so the folder load stays fast.
+- **Icon badges** for aliases, symbolic links, online-only files and locked
+  items.
+- **Cloud column**, read on demand so the folder load stays fast.
 - **Always open with**, for every file of the same type.
 - **Path completion** on Tab in the address field, and the history under a long
   press on Back or Forward.
@@ -267,6 +268,14 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   information...*. A card returns no SMART data at all, and the window shows
   instead what it publishes about itself: maker, revision, serial number,
   manufacture date, speed class, capacity, write protection.
+- **Cloud storage**: iCloud Drive, OneDrive, Dropbox, Google Drive, Box, Proton
+  Drive, pCloud... are gathered in a *Cloud* section of the sidebar instead of
+  being scattered under `Library/CloudStorage`. A file the service keeps online
+  carries a cloud at the end of its name, as in the Finder, and a badge on its
+  icon in the grid modes. The *Cloud* column of the Details view and the details
+  pane name the service and say whether the file is downloaded. The state comes
+  from the kernel's `SF_DATALESS` flag, three thousand times cheaper than the
+  URL ubiquity keys, which cost 3.4 ms per drawn row.
 - **About**: shows the date and time the binary was built, written into the
   bundle by `build.sh`.
 - **Recents**: items opened or modified in the last thirty days, from the
@@ -325,7 +334,7 @@ Six costs measured on this Mac dictated the architecture:
 | --- | --- | --- |
 | `localizedName` on a TCC-protected folder | ~5 to 10 s per call | `DisplayNameCache`, asynchronous and persistent |
 | `tagNames` / `labelNumber` | one `getxattr` per file | second pass after display |
-| `isUbiquitousItem` / `ubiquitousItemDownloadingStatus` | 77 us per file, two thirds of the load of a 5,200-item folder | read on demand, for the selected item only |
+| `isUbiquitousItem` / `ubiquitousItemDownloadingStatus` | 3.4 ms per file on a file provider (414 ms for 123 items), two thirds of the load of a 5,200-item folder | dropped in favour of `lstat` and the `SF_DATALESS` flag: 1.1 ms for the same 123 items |
 | `NSWorkspace.icon(forFile:)` | LaunchServices, may block | generic icon at once, specific one deferred |
 | Contents of a SwiftUI menu | evaluated **on every render** | `SubfolderCache`, never a disk read inside the menu |
 | Size of a folder | full recursive walk | `FolderSizeCalculator`, one folder at a time, cancellable |
@@ -464,8 +473,8 @@ of keys read at load time:
 | Folder read (listing + values) | 0.655 s | 0.200 s |
 | Memory added by the folder | 25.3 MB | 13.7 MB |
 
-The gain comes from three keys removed from the load: the iCloud state, which
-alone cost two thirds of the time and only serves the details pane, and the
+The gain comes from three keys removed from the load: the cloud state, which
+alone cost two thirds of the time and now comes from a single `lstat`, and the
 volume capacities, read per file although they describe the disk. Add to that
 the type labels shared between files of the same kind, and a thumbnail cache
 bounded in bytes (64 MB) rather than in count: 1,500 Retina thumbnails could
@@ -526,6 +535,12 @@ cd Packaging/Icon && swift make-icon.swift . && iconutil --convert icns --output
   their icon, for the reason explained above.
 - Very large files for which QuickLook fails to produce a thumbnail keep the
   generic icon of their type.
+- A cloud folder whose whole content is kept online is not marked: the kernel
+  only flags files, and the Finder reads that from the file provider through a
+  private interface.
+- The *Cloud* section names an account folder as macOS stores it
+  (`OneDrive-Contoso`); the pretty name the Finder shows comes from the same
+  private interface.
 - Folder size computation is shared by all windows: the last folder displayed
   takes over the queue.
 - A remembered size is recomputed when the folder itself changes, not when a

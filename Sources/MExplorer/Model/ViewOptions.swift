@@ -6,7 +6,7 @@ enum ColumnID: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .cloud: return L("iCloud")
+        case .cloud: return L("Nuage")
         case .permissions: return L("Droits")
         case .owner: return L("Proprietaire")
         case .group: return L("Groupe")

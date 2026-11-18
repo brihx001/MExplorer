@@ -1,6 +1,6 @@
 import AppKit
 
-/// Pastille posee sur une icone : alias, lien symbolique, verrou.
+/// Pastille posee sur une icone : alias, lien symbolique, nuage, verrou.
 ///
 /// Le Finder marque ainsi les elements dont la nature ne se devine pas au
 /// dessin. L'image composee est mise en cache par le `IconCache` appelant :
@@ -9,27 +9,24 @@ import AppKit
 enum IconBadge {
 
     enum Kind: String {
-        case alias, symlink, locked
+        case alias, symlink, cloud, locked
 
         /// Symbole SF pose dans le coin.
         var symbol: String {
             switch self {
             case .alias: return "arrowshape.turn.up.left.fill"
             case .symlink: return "link"
+            case .cloud: return "icloud.and.arrow.down.fill"
             case .locked: return "lock.fill"
             }
         }
 
-        var color: NSColor {
-            switch self {
-            case .alias, .symlink: return .white
-            case .locked: return .white
-            }
-        }
+        var color: NSColor { .white }
 
         var background: NSColor {
             switch self {
             case .alias, .symlink: return .controlAccentColor
+            case .cloud: return .systemBlue
             case .locked: return .systemGray
             }
         }
@@ -37,11 +34,20 @@ enum IconBadge {
 
     /// Pastille qui convient a cet element, ou nil s'il n'en demande aucune.
     ///
-    /// L'alias l'emporte sur le verrou : il decrit ce qu'est l'element, le
-    /// verrou seulement ce qu'on peut en faire.
-    static func kind(for item: FileItem) -> Kind? {
+    /// L'alias l'emporte sur le reste : il decrit ce qu'est l'element. Vient
+    /// ensuite le nuage, qui dit ou sont les donnees, puis le verrou, qui ne
+    /// dit que ce qu'on peut en faire. Comme dans le Finder, seul un fichier
+    /// garde en ligne est marque : un fichier telecharge ressemble a tous les
+    /// autres, et c'est bien ce qu'il est.
+    ///
+    /// `marksCloud` est faux dans les vues en lignes : toutes les icones sont
+    /// composees a 32 points puis reduites a 18, ou la pastille ne serait plus
+    /// qu'un point. Ces vues posent a la place un nuage a cote du nom, a la
+    /// maniere du Finder.
+    static func kind(for item: FileItem, marksCloud: Bool = true) -> Kind? {
         if item.isAliasFile { return .alias }
         if item.isSymbolicLink { return .symlink }
+        if marksCloud, item.cloudStatus?.state == .inCloud { return .cloud }
         if !item.isWritable { return .locked }
         return nil
     }

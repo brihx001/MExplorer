@@ -41,8 +41,10 @@ final class IconCache {
     /// plusieurs secondes sur un paquet protege par TCC : elle ne doit jamais
     /// etre appelee pendant le dessin d'une cellule. On rend l'icone generique
     /// du type, puis on resout l'icone specifique en arriere-plan.
-    func icon(for item: FileItem) -> NSImage {
-        guard let badge = IconBadge.kind(for: item) else { return baseIcon(for: item) }
+    func icon(for item: FileItem, marksCloud: Bool = true) -> NSImage {
+        guard let badge = IconBadge.kind(for: item, marksCloud: marksCloud) else {
+            return baseIcon(for: item)
+        }
         return badged(baseIcon(for: item), badge: badge, key: item.url.path)
     }
 

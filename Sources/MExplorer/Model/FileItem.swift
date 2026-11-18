@@ -110,13 +110,18 @@ final class FileItem: NSObject {
         return kind
     }
 
-    /// Etat iCloud, lu a la demande : il ne sert qu'au volet de details, pour
-    /// l'element selectionne. Demande au listing, il coutait a lui seul les
-    /// deux tiers du temps de chargement d'un grand dossier.
-    var cloudState: (isUbiquitous: Bool, status: URLUbiquitousItemDownloadingStatus?) {
-        let v = try? url.resourceValues(forKeys: [.isUbiquitousItemKey,
-                                                  .ubiquitousItemDownloadingStatusKey])
-        return (v?.isUbiquitousItem ?? false, v?.ubiquitousItemDownloadingStatus)
+    /// Etat dans le nuage, ou nil hors de tout service de stockage.
+    ///
+    /// Lu a la demande, et une seule fois : seules les lignes dessinees le
+    /// demandent. Il s'appuie sur le meme `lstat` que les colonnes Unix, d'ou
+    /// le passage par `unixAttributes`.
+    private var cachedCloud: CloudLocations.Status??
+    var cloudStatus: CloudLocations.Status? {
+        if let cachedCloud { return cachedCloud }
+        let status = CloudLocations.status(for: url, isDirectory: isDirectory,
+                                           attributes: unixAttributes)
+        cachedCloud = .some(status)
+        return status
     }
 
     /// Droits, proprietaire et groupe, lus a la demande et une seule fois.
