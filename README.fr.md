@@ -112,7 +112,8 @@ pour cela.
   pendant un glissement bascule dessus apres un court instant (onglet « a
   ressort »), ce qui permet de deposer dans la liste plutot que sur l'onglet.
 - **Volet de navigation** : arborescence reelle et depliable a l'infini
-  (Acces rapide, Nuage, Ce Mac, Emplacements, Tags, Recents, Corbeille).
+  (Acces rapide, Dossiers frequents, Nuage, Ce Mac, Emplacements, Tags, et
+  Divers pour Recents et la Corbeille).
   Le dossier courant est revele et selectionne dans l'arborescence reelle,
   meme quand on y arrive par un raccourci de l'acces rapide. Les dossiers
   deplies sont surveilles : une creation, une suppression ou un renommage, fait
@@ -285,12 +286,12 @@ pour cela.
   comme dans le Finder, et une pastille sur son icone dans les vues en grille.
   La colonne « Nuage » de la vue Details et le volet de details nomment le
   service et disent si le fichier est telecharge. L'etat vient du drapeau
-  `SF_DATALESS` du noyau, trois mille fois moins couteux que les cles d'ubiquite
-  d'URL, qui mettaient 3,4 ms par ligne dessinee. Un client qui monte son propre
-  volume (pCloud) ne publie pas ce drapeau, et rien de ce qu'il montre n'occupe
-  le disque du Mac : tous ses fichiers sont marques en ligne. Un client qui se
-  contente de recopier un dossier (Creative Cloud) a tout sur le disque, et ses
-  fichiers sont marques telecharges.
+  `SF_DATALESS` du noyau, pres de quatre cents fois moins couteux que les cles
+  d'ubiquite d'URL, qui mettaient 3,4 ms par ligne dessinee. Un client qui
+  monte son propre volume (pCloud) ne publie pas ce drapeau, et rien de ce
+  qu'il montre n'occupe le disque du Mac : tous ses fichiers sont marques en
+  ligne. Un client qui se contente de recopier un dossier (Creative Cloud) a
+  tout sur le disque, et ses fichiers sont marques telecharges.
 - **A propos** : affiche la date et l'heure de construction du binaire, posees
   par `build.sh` dans le bundle.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par

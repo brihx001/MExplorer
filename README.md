@@ -117,12 +117,13 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   after a short moment (spring-loaded tab), which allows dropping into the list
   rather than onto the tab.
 - **Navigation pane**: a real tree, expandable without limit (Quick access,
-  Cloud, This Mac, Locations, Tags, Recents, Trash). The current folder is
-  revealed and selected in the real tree, even when reached through a quick
-  access shortcut. Expanded folders are watched: a creation, a deletion or a
-  rename, made in the application or anywhere else, shows up in the tree
-  without collapsing anything. Removable volumes carry an eject button. The
-  startup disk is listed only once, under *This Mac*.
+  Frequent folders, Cloud, This Mac, Locations, Tags, and Other for Recents and
+  the Trash). The current folder is revealed and selected in the real tree,
+  even when reached through a quick access shortcut. Expanded folders are
+  watched: a creation, a deletion or a rename, made in the application or
+  anywhere else, shows up in the tree without collapsing anything. Removable
+  volumes carry an eject button. The startup disk is listed only once, under
+  *This Mac*.
 - **Settings**: interface language, light/dark/system theme, hidden items, file
   name extensions, single-click opening, opening folders in a new tab,
   confirmation of permanent deletions, reset of the display settings, and the
@@ -189,9 +190,9 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   the option did not stick.
 - **Status bar**: item count and total size on the left, summary of the
   selection, progress of long operations, then on the right a **fill gauge for
-  the current volume**, preceded by its name (green to red depending on how full
-  it is, full detail in a tooltip) and the display toggles. The total size ends with an ellipsis for
-  as long as folder sizes remain to be computed.
+  the current volume**, preceded by its name (green to red depending on how
+  full it is, full detail in a tooltip) and the display toggles. The total size
+  ends with an ellipsis for as long as folder sizes remain to be computed.
 - **Details pane** and **preview pane** on the right, whose visibility is
   remembered between launches.
 - **Windows Cut / Paste semantics**: cut items are greyed out until the paste,
@@ -274,12 +275,12 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   carries a cloud at the end of its name, as in the Finder, and a badge on its
   icon in the grid modes. The *Cloud* column of the Details view and the details
   pane name the service and say whether the file is downloaded. The state comes
-  from the kernel's `SF_DATALESS` flag, three thousand times cheaper than the
-  URL ubiquity keys, which cost 3.4 ms per drawn row. A client that mounts its
-  own volume (pCloud) publishes no such flag, and nothing it shows sits on the
-  Mac's disk: all its files are marked as online. A client that merely copies a
-  folder (Creative Cloud) has everything on the disk, and its files are marked
-  as downloaded.
+  from the kernel's `SF_DATALESS` flag, nearly four hundred times cheaper than
+  the URL ubiquity keys, which cost 3.4 ms per drawn row. A client that mounts
+  its own volume (pCloud) publishes no such flag, and nothing it shows sits on
+  the Mac's disk: all its files are marked as online. A client that merely
+  copies a folder (Creative Cloud) has everything on the disk, and its files
+  are marked as downloaded.
 - **About**: shows the date and time the binary was built, written into the
   bundle by `build.sh`.
 - **Recents**: items opened or modified in the last thirty days, from the
