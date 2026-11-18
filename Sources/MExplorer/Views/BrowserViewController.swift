@@ -126,6 +126,16 @@ final class BrowserViewController: NSViewController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.currentArea?.reloadContent() }
             .store(in: &cancellables)
+
+        // L'inventaire des nuages arrive apres le premier dessin : les lignes
+        // deja tracees ignorent encore qu'elles sont dans un service. Il est
+        // lance ici et non dans la seule barre laterale : la liste en a besoin
+        // meme quand le volet de navigation est masque.
+        NotificationCenter.default.publisher(for: CloudLocations.changed)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.currentArea?.reloadContent() }
+            .store(in: &cancellables)
+        CloudLocations.refresh()
     }
 
     private func observePanes() {

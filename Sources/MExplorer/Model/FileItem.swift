@@ -115,12 +115,14 @@ final class FileItem: NSObject {
     /// Lu a la demande, et une seule fois : seules les lignes dessinees le
     /// demandent. Il s'appuie sur le meme `lstat` que les colonnes Unix, d'ou
     /// le passage par `unixAttributes`.
-    private var cachedCloud: CloudLocations.Status??
+    private var cachedCloud: (generation: Int, status: CloudLocations.Status?)?
     var cloudStatus: CloudLocations.Status? {
-        if let cachedCloud { return cachedCloud }
+        if let cachedCloud, cachedCloud.generation == CloudLocations.generation {
+            return cachedCloud.status
+        }
         let status = CloudLocations.status(for: url, isDirectory: isDirectory,
                                            attributes: unixAttributes)
-        cachedCloud = .some(status)
+        cachedCloud = (CloudLocations.generation, status)
         return status
     }
 

@@ -275,7 +275,11 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   icon in the grid modes. The *Cloud* column of the Details view and the details
   pane name the service and say whether the file is downloaded. The state comes
   from the kernel's `SF_DATALESS` flag, three thousand times cheaper than the
-  URL ubiquity keys, which cost 3.4 ms per drawn row.
+  URL ubiquity keys, which cost 3.4 ms per drawn row. A client that mounts its
+  own volume (pCloud) publishes no such flag, and nothing it shows sits on the
+  Mac's disk: all its files are marked as online. A client that merely copies a
+  folder (Creative Cloud) has everything on the disk, and its files are marked
+  as downloaded.
 - **About**: shows the date and time the binary was built, written into the
   bundle by `build.sh`.
 - **Recents**: items opened or modified in the last thirty days, from the

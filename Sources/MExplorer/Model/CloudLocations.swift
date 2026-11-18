@@ -57,24 +57,34 @@ enum CloudLocations {
         }
     }
 
+    /// La facon dont le service pose ses fichiers sur le Mac, d'ou se deduit
+    /// l'etat de chacun.
+    enum Storage {
+        /// Extension de fichiers : macOS tient l'etat de chaque fichier, et le
+        /// noyau marque d'un drapeau ceux qui restent en ligne.
+        case fileProvider
+        /// Volume monte par le client, qui diffuse les fichiers a la demande :
+        /// rien n'occupe le disque du Mac.
+        case streamed
+        /// Dossier ordinaire que le client recopie : tout est sur le disque.
+        case synced
+    }
+
     /// Une racine de service : le dossier par lequel on entre dans le nuage.
     struct Root {
         let url: URL
         let provider: Provider
         /// Libelle montre dans la barre laterale.
         let title: String
-        /// Vrai quand macOS tient l'etat de chaque fichier, c'est-a-dire quand
-        /// le service passe par une extension de fichiers. Un volume monte par
-        /// un client qui diffuse ses fichiers (pCloud) n'en dit rien.
-        let tracksItems: Bool
+        let storage: Storage
         /// Chemin standardise, garde pour la comparaison de prefixe.
         let path: String
 
-        init(url: URL, provider: Provider, title: String, tracksItems: Bool) {
+        init(url: URL, provider: Provider, title: String, storage: Storage) {
             self.url = url
             self.provider = provider
             self.title = title
-            self.tracksItems = tracksItems
+            self.storage = storage
             self.path = url.standardizedFileURL.path
         }
     }
@@ -128,11 +138,18 @@ enum CloudLocations {
         // Le noyau ne pose le drapeau que sur les fichiers : un dossier dont
         // tout le contenu est en ligne ressemble a n'importe quel autre.
         // Annoncer « telecharge » serait faux, on s'en tient au service.
-        guard root.tracksItems, !isDirectory else {
-            return Status(provider: root.provider, state: .unknown)
+        guard !isDirectory else { return Status(provider: root.provider, state: .unknown) }
+        switch root.storage {
+        case .fileProvider:
+            let isPlaceholder = attributes()?.isDataless ?? false
+            return Status(provider: root.provider, state: isPlaceholder ? .inCloud : .downloaded)
+        case .streamed:
+            // Le client monte un volume reseau : le fichier n'est pas sur le
+            // disque du Mac, quoi qu'en dise sa taille.
+            return Status(provider: root.provider, state: .inCloud)
+        case .synced:
+            return Status(provider: root.provider, state: .downloaded)
         }
-        let isPlaceholder = attributes()?.isDataless ?? false
-        return Status(provider: root.provider, state: isPlaceholder ? .inCloud : .downloaded)
     }
 
     /// Racine qui contient cet element, le cas echeant.
@@ -149,6 +166,12 @@ enum CloudLocations {
     /// Racines connues. Lue sur le thread principal, remplacee par `refresh`.
     private(set) static var roots: [Root] = []
 
+    /// Numero de version de l'inventaire. La recherche se fait en tache de
+    /// fond : au lancement, le dossier affiche est dessine avant qu'elle
+    /// n'aboutisse, et les elements qui ont deja retenu leur etat doivent le
+    /// recalculer plutot que de rester sur un « hors du nuage » premature.
+    private(set) static var generation = 0
+
     static let changed = Notification.Name("com.jerome.mexplorer.cloudLocationsChanged")
 
     /// Recharge l'inventaire hors du thread principal puis notifie.
@@ -161,7 +184,10 @@ enum CloudLocations {
             DispatchQueue.main.async {
                 let changedList = found.map(\.path) != roots.map(\.path)
                 roots = found
-                if changedList { NotificationCenter.default.post(name: changed, object: nil) }
+                if changedList {
+                    generation &+= 1
+                    NotificationCenter.default.post(name: changed, object: nil)
+                }
             }
         }
     }
@@ -172,7 +198,7 @@ enum CloudLocations {
 
         if let icloud = SidebarCatalog.iCloudDrive {
             result.append(Root(url: icloud, provider: .iCloud,
-                               title: L("iCloud Drive"), tracksItems: true))
+                               title: L("iCloud Drive"), storage: .fileProvider))
         }
 
         // Les services modernes. Un dossier laisse par une installation
@@ -188,7 +214,8 @@ enum CloudLocations {
             let values = try? url.resourceValues(forKeys: Set(keys))
             guard values?.isDirectory == true, values?.isUbiquitousItem == true else { continue }
             let name = url.lastPathComponent
-            result.append(Root(url: url, provider: .named(name), title: name, tracksItems: true))
+            result.append(Root(url: url, provider: .named(name), title: name,
+                               storage: .fileProvider))
         }
 
         // Les clients restes a l'ecart de ce mecanisme : un volume monte dans
@@ -201,9 +228,15 @@ enum CloudLocations {
         for url in homeEntries.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }) {
             guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
             let name = url.lastPathComponent
-            guard let provider = mountedProvider(at: url) ?? knownFolderProvider(named: name) else { continue }
+            var storage = Storage.streamed
+            var provider = mountedProvider(at: url)
+            if provider == nil {
+                storage = .synced
+                provider = knownFolderProvider(named: name)
+            }
+            guard let provider else { continue }
             guard !result.contains(where: { $0.path == url.standardizedFileURL.path }) else { continue }
-            result.append(Root(url: url, provider: provider, title: name, tracksItems: false))
+            result.append(Root(url: url, provider: provider, title: name, storage: storage))
         }
 
         return result

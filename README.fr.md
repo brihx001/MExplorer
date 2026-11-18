@@ -285,7 +285,11 @@ pour cela.
   La colonne « Nuage » de la vue Details et le volet de details nomment le
   service et disent si le fichier est telecharge. L'etat vient du drapeau
   `SF_DATALESS` du noyau, trois mille fois moins couteux que les cles d'ubiquite
-  d'URL, qui mettaient 3,4 ms par ligne dessinee.
+  d'URL, qui mettaient 3,4 ms par ligne dessinee. Un client qui monte son propre
+  volume (pCloud) ne publie pas ce drapeau, et rien de ce qu'il montre n'occupe
+  le disque du Mac : tous ses fichiers sont marques en ligne. Un client qui se
+  contente de recopier un dossier (Creative Cloud) a tout sur le disque, et ses
+  fichiers sont marques telecharges.
 - **A propos** : affiche la date et l'heure de construction du binaire, posees
   par `build.sh` dans le bundle.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
