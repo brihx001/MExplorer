@@ -33,7 +33,10 @@ d'oeil, comme dans le Finder.
 ```
 
 Le script compile avec Swift Package Manager, assemble `MExplorer.app`, puis
-signe le bundle en ad-hoc avec les entitlements du bac a sable.
+signe le bundle avec les entitlements du bac a sable : avec le certificat local
+s'il y en a un, en ad-hoc sinon (voir *Autorisations de confidentialite et
+signature*). Il inscrit aussi dans le bundle la date de construction, que
+montre la fenetre « A propos ».
 
 Deux contournements de toolchain sont appliques automatiquement par `build.sh`
 (macOS 27 / Swift 6.4, sans Xcode selectionne) :

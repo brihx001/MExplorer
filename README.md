@@ -32,7 +32,9 @@ a file that is not on the disk is recognised at a glance, as in the Finder.
 ```
 
 The script builds with Swift Package Manager, assembles `MExplorer.app`, then
-signs the bundle ad-hoc with the sandbox entitlements.
+signs the bundle with the sandbox entitlements: with the local certificate when
+there is one, ad-hoc otherwise (see *Privacy permissions and signing*). It also
+writes the build date into the bundle, which the *About* window shows.
 
 `build.sh` applies two toolchain workarounds on its own (macOS 27 / Swift 6.4,
 with no Xcode selected):
