@@ -4,23 +4,66 @@ import AppKit
 /// l'Explorateur Windows quand ils ne heurtent pas une convention macOS.
 enum MainMenu {
 
-    /// Panneau standard, complete par la date et l'heure de construction :
-    /// `build.sh` les inscrit dans le bundle sous la clef MEXBuildDate.
+    static let authorURL = URL(string: "https://github.com/brihx001")!
+    static let repositoryURL = URL(string: "https://github.com/brihx001/MExplorer")!
+
+    /// Panneau standard, complete par l'auteur, le depot et la date de
+    /// construction. Le numero de version vient du bundle, AppKit s'en charge.
     static func showAboutPanel() {
-        var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits()])
+    }
+
+    /// Trois lignes centrees sous le numero de version.
+    ///
+    /// Le panneau standard rend les credits dans un NSTextView : un attribut
+    /// `.link` y est cliquable et ouvre le navigateur, sans code a ecrire.
+    private static func credits() -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.paragraphSpacing = 3
+
+        let base: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11),
+            .foregroundColor: NSColor.secondaryLabelColor,
+            .paragraphStyle: paragraph
+        ]
+
+        let text = NSMutableAttributedString()
+        // L'auteur : seul son nom est cliquable, pas la mention qui l'introduit.
+        text.append(line(L("Par %@", "brihx001"), linking: "brihx001",
+                         to: authorURL, base: base))
+        text.append(NSAttributedString(string: "\n", attributes: base))
+
+        let source = L("Code source sur GitHub")
+        text.append(line(source, linking: source, to: repositoryURL, base: base))
+
+        // `build.sh` inscrit la date de construction dans le bundle sous la
+        // clef MEXBuildDate : elle dit quel binaire on a reellement sous la
+        // main, ce que le seul numero de version ne suffit pas a trancher.
         if let raw = Bundle.main.object(forInfoDictionaryKey: "MEXBuildDate") as? String,
            let date = ISO8601DateFormatter().date(from: raw) {
             let formatter = DateFormatter()
             formatter.locale = .autoupdatingCurrent
             formatter.dateStyle = .medium
             formatter.timeStyle = .short
-            let line = L("Construit le %@", formatter.string(from: date))
-            options[.credits] = NSAttributedString(
-                string: line,
-                attributes: [.font: NSFont.systemFont(ofSize: 11),
-                             .foregroundColor: NSColor.secondaryLabelColor])
+            text.append(NSAttributedString(string: "\n", attributes: base))
+            text.append(NSAttributedString(
+                string: L("Construit le %@", formatter.string(from: date)),
+                attributes: base))
         }
-        NSApp.orderFrontStandardAboutPanel(options: options)
+        return text
+    }
+
+    private static func line(_ text: String, linking fragment: String,
+                             to url: URL,
+                             base: [NSAttributedString.Key: Any]) -> NSAttributedString {
+        let result = NSMutableAttributedString(string: text, attributes: base)
+        guard let range = text.range(of: fragment) else { return result }
+        result.addAttributes([.link: url,
+                              .foregroundColor: NSColor.linkColor,
+                              .cursor: NSCursor.pointingHand],
+                             range: NSRange(range, in: text))
+        return result
     }
 
 

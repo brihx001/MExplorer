@@ -281,8 +281,10 @@ the project (entitlements, bookmarks, no private API) is ready for it.
   the Mac's disk: all its files are marked as online. A client that merely
   copies a folder (Creative Cloud) has everything on the disk, and its files
   are marked as downloaded.
-- **About**: shows the date and time the binary was built, written into the
-  bundle by `build.sh`.
+- **About**: the author and the repository, both as clickable links, then the
+  date and time the binary was built, written into the bundle by `build.sh`.
+  The version number alone does not say which binary is in hand; that date
+  does.
 - **Recents**: items opened or modified in the last thirty days, from the
   Spotlight index (`kMDItemLastUsedDate`, `kMDItemFSContentChangeDate`). The
   personal library is left out: its caches and logs change constantly and would

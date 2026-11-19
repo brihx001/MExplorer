@@ -502,5 +502,7 @@ enum EnglishStrings {
         "Ce disque n'expose pas de donnees SMART. C'est le cas courant des boitiers USB, qui ne transmettent pas les commandes de diagnostic du disque qu'ils contiennent. Voici ce que le peripherique publie sur lui-meme.": "This disk exposes no SMART data. That is usual for USB enclosures, which do not pass the diagnostic commands through to the drive inside. Here is what the device publishes about itself.",
         "Nuage": "Cloud",
         "Dans le nuage": "In the cloud",
+        "Par %@": "By %@",
+        "Code source sur GitHub": "Source code on GitHub",
     ]
 }

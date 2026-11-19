@@ -292,8 +292,9 @@ pour cela.
   qu'il montre n'occupe le disque du Mac : tous ses fichiers sont marques en
   ligne. Un client qui se contente de recopier un dossier (Creative Cloud) a
   tout sur le disque, et ses fichiers sont marques telecharges.
-- **A propos** : affiche la date et l'heure de construction du binaire, posees
-  par `build.sh` dans le bundle.
+- **A propos** : l'auteur et le depot, cliquables, puis la date et l'heure de
+  construction du binaire, posees par `build.sh` dans le bundle. Le seul
+  numero de version ne dit pas quel binaire on a sous la main, cette date si.
 - **Recents** : les elements ouverts ou modifies depuis trente jours, par
   l'index Spotlight (`kMDItemLastUsedDate`, `kMDItemFSContentChangeDate`).
   La bibliotheque personnelle est ecartee : ses caches et ses journaux
