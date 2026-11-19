@@ -13,10 +13,10 @@ No third-party dependency.
 
 **English** · **[Francais](README.fr.md)**
 
-**Latest release: [v0.6.6](https://github.com/brihx001/MExplorer/releases/tag/v0.6.6)**
-— the cloud storage services are gathered in a *Cloud* section of the sidebar,
-and a file that is not on the disk is recognised at a glance, as in the Finder.
-The status bar gauge at last names the volume it measures.
+**Latest release: [v0.7.0](https://github.com/brihx001/MExplorer/releases/tag/v0.7.0)**
+— the *About* window names the author and leads to the repository; 0.6.6
+gathered the cloud storage services in a *Cloud* section of the sidebar, where
+a file that is not on the disk is recognised at a glance, as in the Finder.
 
 ## Requirements
 

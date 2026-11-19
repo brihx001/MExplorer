@@ -13,11 +13,11 @@ commandes, le fil d'Ariane et le volet de details. Aucune dependance tierce.
 
 **[English](README.md)** · **Francais**
 
-**Derniere version : [v0.6.6](https://github.com/brihx001/MExplorer/releases/tag/v0.6.6)**
-— les services de stockage en nuage sont reunis dans une section « Nuage » de
-la barre laterale, et un fichier qui n'est pas sur le disque se reconnait d'un
-coup d'oeil, comme dans le Finder. La jauge de la barre d'etat nomme enfin le
-volume qu'elle mesure.
+**Derniere version : [v0.7.0](https://github.com/brihx001/MExplorer/releases/tag/v0.7.0)**
+— la fenetre « A propos » nomme l'auteur et mene au depot ; la 0.6.6 a reuni
+les services de stockage en nuage dans une section « Nuage » de la barre
+laterale, ou un fichier qui n'est pas sur le disque se reconnait d'un coup
+d'oeil, comme dans le Finder.
 
 ## Prerequis
 
